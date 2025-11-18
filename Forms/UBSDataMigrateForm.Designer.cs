@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             this.label_Debtor_Title = new System.Windows.Forms.Label();
             this.txt_path_AccFolder = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
@@ -229,8 +229,8 @@
             this.dgv_selModImport.Location = new System.Drawing.Point(199, 46);
             this.dgv_selModImport.Name = "dgv_selModImport";
             this.dgv_selModImport.RowHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.None;
-            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
-            this.dgv_selModImport.RowsDefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
+            this.dgv_selModImport.RowsDefaultCellStyle = dataGridViewCellStyle1;
             this.dgv_selModImport.ShowEditingIcon = false;
             this.dgv_selModImport.Size = new System.Drawing.Size(589, 189);
             this.dgv_selModImport.TabIndex = 45;
@@ -394,6 +394,7 @@
             this.Name = "UBSDataMigrateForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Migrate UBS Account";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.UBSDataMigrateForm_FormClosing);
             ((System.ComponentModel.ISupportInitialize)(this.nud_recRangeStart)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataSet1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgv_selModImport)).EndInit();

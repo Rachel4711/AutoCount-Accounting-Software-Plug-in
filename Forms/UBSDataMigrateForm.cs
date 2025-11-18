@@ -1,14 +1,12 @@
 ﻿using DbfDataReader;
-using Microsoft.EntityFrameworkCore.Internal;
-using PlugIn_1.Entity;
+using PlugIn_1.Entity.General_Maintainance;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Windows.Forms;
 using System.Linq;
-using AutoCount.Data.EntityFramework;
-using Debtor = PlugIn_1.Entity.Debtor;
+using System.Windows.Forms;
 using Creditor = PlugIn_1.Entity.Account.Creditor;
+using Debtor = PlugIn_1.Entity.Debtor;
 
 namespace PlugIn_1.Forms
 {
@@ -56,8 +54,7 @@ namespace PlugIn_1.Forms
             btn_browseStkFolder.Enabled = 
                 txt_path_StkFolder.Enabled = 
                 btn_listModule.Enabled = 
-                txt_path_AccFolder.Text.Equals("") ? 
-                false : true;
+                txt_path_AccFolder.Text.Equals("") ? false : true;
         }
 
         private void nud_recRangeStart_Click(object sender, EventArgs e)
@@ -174,8 +171,6 @@ namespace PlugIn_1.Forms
 
             string[] stk_file_name =
             {
-                "icagent",
-                "icarea",
                 "iccate",
                 "icgroup",
                 "icitem",
@@ -206,7 +201,7 @@ namespace PlugIn_1.Forms
 
                 foreach (KeyValuePair<string, string[]> module in module_rows)
                 {
-                    string dbf_file_path = stk_file_name.Any(module.Key.Equals) ?
+                    string dbf_file_path = stk_file_name.Contains(module.Key) ?
                         txt_path_StkFolder.Text : txt_path_AccFolder.Text;
 
                     UBSData_Import(dbf_file_path, module.Key, module.Value);
@@ -245,6 +240,24 @@ namespace PlugIn_1.Forms
             Close();
         }
 
+        private void UBSDataMigrateForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            bool changeMade = (
+                (txt_path_AccFolder.Text.Equals("") && txt_path_StkFolder.Text.Equals("")) ||
+                dgv_selModImport.Rows.Count == 0
+                ) ? false : true;
+
+            if (changeMade)
+            {
+                DialogResult result = MessageBox.Show(
+                "Any information given here wil be LOST. Confirm to quit from data migration?",
+                "Exit from Data Migration",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+
+                e.Cancel = result.ToString().Equals("No") ? true : false;
+            }
+        }
+
         private void DGVTable_Load()
         {
             DataTable dataTable = new DataTable("Table");
@@ -276,13 +289,6 @@ namespace PlugIn_1.Forms
             dgv_selModImport.Columns[3].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dgv_selModImport.Columns[4].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dgv_selModImport.Columns[0].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-        }
-
-        private void UBSLoadDefault(string module_name)
-        {
-            DataTable dataTable = dataSet1.Tables["Table"];
-
-            dataTable.Rows.Add(false, module_name, "-", "-", 0);
         }
 
         private void UBSData_Load(TextBox textBox, string dbf_file_name, string module_name)
@@ -348,6 +354,19 @@ namespace PlugIn_1.Forms
                         {
                             switch (module_name)
                             {
+                                case "Agent":
+                                    ProcessImport_Agent(dbfDataReader);
+                                    break;
+                                case "Area":
+                                    ProcessImport_Area(dbfDataReader);
+                                    break;
+                                case "Project":
+                                    break;
+                                case "Terms":
+                                    break;
+                                case "Currency":
+                                    ProcessImport_Currency(dbfDataReader);
+                                    break;
                                 case "Customer":
                                     ProcessImport_Debtor(dbfDataReader);
                                     break;
@@ -361,9 +380,20 @@ namespace PlugIn_1.Forms
                         }
                         catch (Exception ex)
                         {
-                            exception += $"{module_name}|{ex.Message}";
+                            exception += $"{module_name}|{ex.GetType().ToString()}\n";
 
-                            rtxt_importStusLog.AppendText($"\n \u274C (Rec no. {current_record}) {ex.Message}");
+                            string msg;
+
+                            try
+                            { 
+                                msg = ex.InnerException.Message; 
+                            }
+                            catch (NullReferenceException)
+                            { 
+                                msg = ex.Message;  
+                            }
+
+                            rtxt_importStusLog.AppendText($"\n \u274C (Rec no. {current_record}) {msg}");
                             failure++;
                         }
                     }
@@ -376,12 +406,48 @@ namespace PlugIn_1.Forms
             rtxt_importStusLog.ScrollToCaret();
         }
 
+        private void ProcessImport_Agent(DbfDataReader.DbfDataReader dbfDataReader)
+        {
+            Agents agent = new Agents(Program.session);
+
+            string agent_name = dbfDataReader.GetString(0);
+            string agent_desc = dbfDataReader.GetString(1);
+
+            agent.NewSalesAgent(agent_name, agent_desc);
+
+            rtxt_importStusLog.AppendText($"\n \u2705 Added agent : {agent_name} --- {agent_desc}");
+        }
+
+        private void ProcessImport_Area(DbfDataReader.DbfDataReader dbfDataReader)
+        {
+            Areas area = new Areas(Program.session);
+
+            string area_code = dbfDataReader.GetString(0);
+            string area_desc = dbfDataReader.GetString(1);
+
+            area.NewArea(area_code, area_desc);
+
+            rtxt_importStusLog.AppendText($"\n \u2705 Added area : {area_code} --- {area_desc}");
+        }
+
+        private void ProcessImport_Currency(DbfDataReader.DbfDataReader dbfDataReader)
+        {
+            Currencies currencies = new Currencies(Program.session);
+
+            string currency_code = dbfDataReader.GetString(0);
+            string currency_word = dbfDataReader.GetString(1);
+
+            currencies.NewCurrency(currency_code, currency_word);
+
+            rtxt_importStusLog.AppendText($"\n \u2705 Created currency : {currency_code}");
+        }
+
         private void ProcessImport_Debtor(DbfDataReader.DbfDataReader dbfDataReader)
         {
             Debtor debtor = new Debtor(Program.session);
 
-            string acc_name = dbfDataReader.GetString(2);
             string acc_no = dbfDataReader.GetString(1);
+            string acc_name = dbfDataReader.GetString(2);
 
             debtor.CreateNewDebtor(dbfDataReader);
 
@@ -392,8 +458,8 @@ namespace PlugIn_1.Forms
         {
             Creditor creditor = new Creditor(Program.session);
 
-            string acc_name = dbfDataReader.GetString(2);
             string acc_no = dbfDataReader.GetString(1);
+            string acc_name = dbfDataReader.GetString(2);
 
             creditor.CreateNewCreditor(dbfDataReader);
 
@@ -473,6 +539,7 @@ namespace PlugIn_1.Forms
             string[] prime_arr = exception.Split('\n');
             string printing_text = "";
             string previous_ex = "";
+            string previous_table = "";
 
             foreach (string prime in prime_arr)
             {
@@ -488,7 +555,11 @@ namespace PlugIn_1.Forms
                 }
                 catch (IndexOutOfRangeException) { }
 
-                printing_text += prime.Equals("") ? "" : "- " + arr[0] + "\n";
+                if (arr[0] != previous_table)
+                {
+                    previous_table = arr[0];
+                    printing_text += prime.Equals("") ? "" : "- " + arr[0] + "\n";
+                }
             }
 
             return printing_text;
