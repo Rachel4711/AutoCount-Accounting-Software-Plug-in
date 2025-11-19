@@ -1,4 +1,5 @@
-﻿using DbfDataReader;
+﻿using AutoCount.Data.EntityFramework;
+using DbfDataReader;
 using PlugIn_1.Entity.General_Maintainance;
 using System;
 using System.Collections.Generic;
@@ -30,12 +31,12 @@ namespace PlugIn_1.Forms
         private void btn_rangeHelp_Click(object sender, EventArgs e)
         {
             MessageBox.Show(
-                "Here are the guides to set record importing range:\n" +
-                "1. Select the entire row by click on most left side of the row.\n" +
-                "2. Set both value to 0 to import all records in the table.\n" +
-                "3. Set both value to the same number to import single record.\n" +
-                "4. The value of \"Start from record\" should less than \"End to record\".\n" +
-                "5. The value of both \"Start from record\" and \"End to record\" should less than total number of records in selected table.\n",
+                "Guides to set record importing range:\n\n" +
+                "1. Click on the checkbox on the left to select a table to import.\n" +
+                "2. Select the entire row by click on most left side of the row.\n" +
+                "3. Set both value to 0 to import all records in the table.\n" +
+                "4. Set both value to the same number to import single record.\n" +
+                "5. The value of start < end < total records in table.",
                 "Import Range Setting Help Guide", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -122,10 +123,18 @@ namespace PlugIn_1.Forms
 
                 exception = null;
 
+                if (dgv_selModImport.RowCount > 0)
+                {
+                    dataSet1.Tables.Remove("Table");
+                }
+
                 DGVTable_Load();
 
                 UBSData_Load(txt_path_AccFolder, "gldata", "Chart of Account");
-                UBSData_Load(txt_path_AccFolder, "icagent", "Agent");
+                UBSData_Load(txt_path_AccFolder, "icagent", "Sales Agent");
+
+                if (txt_path_StkFolder.Text != "") UBSData_Load(txt_path_StkFolder, "icagent", "Purchase Agent");
+
                 UBSData_Load(txt_path_AccFolder, "icarea", "Area");
                 UBSData_Load(txt_path_AccFolder, "project", "Project");
                 UBSData_Load(txt_path_AccFolder, "accmem", "Terms");
@@ -155,26 +164,29 @@ namespace PlugIn_1.Forms
             DataTable dataTable = dataSet1.Tables["Table"];
 
             rtxt_importStusLog.Text = "";
+            lb_copied.Visible = false;
 
             Dictionary<string, string[]> module_rows = new Dictionary<string, string[]>();
             Dictionary<string, string> name_to_file = new Dictionary<string, string>()
             {
                 {"Chart of Account" , "gldata"},
-                {"Agent"            , "icagent"},
+                {"Sales Agent"      , "icagent"},
+                {"Purchase Agent"   , "icagent"},
                 {"Area"             , "icarea"},
                 {"Project"          , "project"},
-                {"Terms"            , "accmem"},
+                {""            , "accmem"},
                 {"Currency"         , "currency"},
                 {"Customer"         , "arcust"},
                 {"Supplier"         , "apvend"},
             };
 
-            string[] stk_file_name =
+            string[] stk_module_name =
             {
-                "iccate",
-                "icgroup",
-                "icitem",
-                "iclocate",
+                "Purchase Agent",
+                "Category",
+                "Group",
+                "Item",
+                "Location",
                 "icl3p"
             };
 
@@ -183,10 +195,10 @@ namespace PlugIn_1.Forms
                 if ((bool)row["Select"])
                 {
                     module_rows.Add(
-                        name_to_file[row["Module Name"].ToString()],
+                        row["Module Name"].ToString(),                      // Module(Table) name --> KEY
                         new string[]
                         {
-                            row["Module Name"].ToString(),
+                            name_to_file[row["Module Name"].ToString()],    // File name
                             row["Start From Record"].ToString(),
                             row["End To Record"].ToString(),
                             row["Total Records"].ToString()
@@ -201,7 +213,7 @@ namespace PlugIn_1.Forms
 
                 foreach (KeyValuePair<string, string[]> module in module_rows)
                 {
-                    string dbf_file_path = stk_file_name.Contains(module.Key) ?
+                    string dbf_file_path = stk_module_name.Contains(module.Key) ? // Take from stock folder if is stock table, else take from account folder.
                         txt_path_StkFolder.Text : txt_path_AccFolder.Text;
 
                     UBSData_Import(dbf_file_path, module.Key, module.Value);
@@ -212,11 +224,11 @@ namespace PlugIn_1.Forms
                     exception = GenerateExceptionList(exception);
 
                     MessageBox.Show(
-                        "Exception has occur when migrating the table below:\n" +
+                        "Exceptions has occur when migrating the table below:\n" +
                         exception + "\n" +
                         "Please review the status log for more information.",
-                        $"Data migration failure",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        $"Data migration contains error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
                 else
                 {
@@ -226,6 +238,13 @@ namespace PlugIn_1.Forms
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
+            else
+            {
+                MessageBox.Show(
+                    "Please select at least 1 table to import.",
+                    $"No selected table(s)",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void btn_copyImportStus_Click(object sender, EventArgs e)
@@ -233,6 +252,11 @@ namespace PlugIn_1.Forms
             Clipboard.SetText(rtxt_importStusLog.Text);
 
             lb_copied.Visible = true;
+        }
+
+        private void btn_copyImportStus_Leave(object sender, EventArgs e)
+        {
+            lb_copied.Visible = false;
         }
 
         private void button_exit_Click(object sender, EventArgs e)
@@ -257,6 +281,8 @@ namespace PlugIn_1.Forms
                 e.Cancel = result.ToString().Equals("No") ? true : false;
             }
         }
+
+        //----------------------------------------------------------------------------------------------------//
 
         private void DGVTable_Load()
         {
@@ -321,19 +347,18 @@ namespace PlugIn_1.Forms
             }
         }
 
-        private void UBSData_Import(string dbf_file_path, string dbf_file_name, string[] module_details)
+        private void UBSData_Import(string dbf_file_path, string module_name, string[] module_details)
         {
-            string file_path = $"{dbf_file_path}\\{dbf_file_name}.dbf";
-            string module_name = module_details[0] ;
+            string file_path = $"{dbf_file_path}\\{module_details[0]}.dbf";
             
             int start_from_rec   = module_details[1].Equals("-") ? 1 : int.Parse(module_details[1]);
             int end_to_rec       = module_details[2].Equals("-") ? 0 : int.Parse(module_details[2]);
             int total_rec = int.Parse(module_details[3]);
 
-            int current_record = 0, success = 0, failure = 0;
-
             end_to_rec = end_to_rec == 0 ? total_rec : end_to_rec;
             
+            int current_record = 0, success = 0, failure = 0;
+
             var options = new DbfDataReaderOptions
             {
                 SkipDeletedRecords = true
@@ -341,7 +366,7 @@ namespace PlugIn_1.Forms
 
             using (var dbfDataReader = new DbfDataReader.DbfDataReader(file_path, options))
             {
-                rtxt_importStusLog.Text += $" \u25B6 Start import {module_name} data from record number {start_from_rec} to {end_to_rec}.\n";
+                rtxt_importStusLog.AppendText($" \u25B6 Start import {module_name} data from record number {start_from_rec} to {end_to_rec}.\n");
 
                 while (dbfDataReader.Read())
                 {
@@ -354,46 +379,48 @@ namespace PlugIn_1.Forms
                         {
                             switch (module_name)
                             {
-                                case "Agent":
-                                    ProcessImport_Agent(dbfDataReader);
+                                case "Sales Agent":
+                                    ProcessImport_SalesAgent(dbfDataReader, current_record);
+                                    break;
+                                case "Purchase Agent":
+                                    ProcessImport_PurchaseAgent(dbfDataReader, current_record);
                                     break;
                                 case "Area":
-                                    ProcessImport_Area(dbfDataReader);
+                                    ProcessImport_Area(dbfDataReader, current_record);
                                     break;
                                 case "Project":
-                                    break;
-                                case "Terms":
+                                    ProcessImport_Project(dbfDataReader, current_record);
                                     break;
                                 case "Currency":
-                                    ProcessImport_Currency(dbfDataReader);
+                                    ProcessImport_Currency(dbfDataReader, current_record);
                                     break;
                                 case "Customer":
-                                    ProcessImport_Debtor(dbfDataReader);
+                                    ProcessImport_Debtor(dbfDataReader, current_record);
                                     break;
                                 case "Supplier":
-                                    ProcessImport_Creditor(dbfDataReader);
+                                    ProcessImport_Creditor(dbfDataReader, current_record);
                                     break;
                                 default:
-                                    throw new Exception($"{dbf_file_name}({module_name}) does not belong to the backup data table.");
+                                    throw new Exception($"{module_details[0]}({module_name}) does not belong to the backup data table.");
                             }
                             success++;
                         }
                         catch (Exception ex)
                         {
-                            exception += $"{module_name}|{ex.GetType().ToString()}\n";
+                            exception += $"{module_name}|{ex.GetType().Name}\n";
 
-                            string msg;
+                            string exc_msg;
 
                             try
-                            { 
-                                msg = ex.InnerException.Message; 
-                            }
-                            catch (NullReferenceException)
-                            { 
-                                msg = ex.Message;  
+                            {
+                                exc_msg = $"{ex.InnerException.Message}: {ex.Message}";
+                            } 
+                            catch (NullReferenceException) 
+                            {
+                                exc_msg = ex.Message;
                             }
 
-                            rtxt_importStusLog.AppendText($"\n \u274C (Rec no. {current_record}) {msg}");
+                            rtxt_importStusLog.AppendText($"\n \u274C (Rec {current_record}) {exc_msg}");
                             failure++;
                         }
                     }
@@ -406,66 +433,117 @@ namespace PlugIn_1.Forms
             rtxt_importStusLog.ScrollToCaret();
         }
 
-        private void ProcessImport_Agent(DbfDataReader.DbfDataReader dbfDataReader)
+        private void ProcessImport_SalesAgent(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
         {
             Agents agent = new Agents(Program.session);
 
             string agent_name = dbfDataReader.GetString(0);
             string agent_desc = dbfDataReader.GetString(1);
 
-            agent.NewSalesAgent(agent_name, agent_desc);
+            string sts_word = DefStatus();
 
-            rtxt_importStusLog.AppendText($"\n \u2705 Added agent : {agent_name} --- {agent_desc}");
+            agent.CreateOrUpdate_SalesAgent(chk_overwriteExistData.Checked, agent_name, agent_desc);
+
+            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} sales agent : {agent_name} - {agent_desc}");
         }
 
-        private void ProcessImport_Area(DbfDataReader.DbfDataReader dbfDataReader)
+        private void ProcessImport_PurchaseAgent(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
+        {
+            Agents agent = new Agents(Program.session);
+
+            string agent_name = dbfDataReader.GetString(0);
+            string agent_desc = dbfDataReader.GetString(1);
+
+            string sts_word = DefStatus();
+
+            agent.CreateOrUpdate_PurchaseAgent(chk_overwriteExistData.Checked, agent_name, agent_desc);
+
+            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} purchase agent : {agent_name} - {agent_desc}");
+        }
+
+        private void ProcessImport_Area(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
         {
             Areas area = new Areas(Program.session);
 
             string area_code = dbfDataReader.GetString(0);
             string area_desc = dbfDataReader.GetString(1);
 
-            area.NewArea(area_code, area_desc);
+            string sts_word = DefStatus();
 
-            rtxt_importStusLog.AppendText($"\n \u2705 Added area : {area_code} --- {area_desc}");
+            area.CreateOrUpdate_Area(chk_overwriteExistData.Checked, area_code, area_desc);
+
+            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} area : {area_code} - {area_desc}");
         }
 
-        private void ProcessImport_Currency(DbfDataReader.DbfDataReader dbfDataReader)
+        private void ProcessImport_Project(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
+        {
+            Projects projects = new Projects(Program.session);
+
+            string project_no = dbfDataReader.GetString(0);
+            string project_desc = dbfDataReader.GetString(1);
+            string project_type = dbfDataReader.GetString(2);
+
+            string sts_word = DefStatus();
+
+            projects.CreateOrUpdate_Project(chk_overwriteExistData.Checked, project_no, project_desc, project_type);
+
+            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} project : {project_no} - {project_desc}");
+        }
+
+        private void ProcessImport_Currency(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
         {
             Currencies currencies = new Currencies(Program.session);
 
             string currency_code = dbfDataReader.GetString(0);
             string currency_word = dbfDataReader.GetString(1);
 
-            currencies.NewCurrency(currency_code, currency_word);
+            string sts_word = DefStatus();
 
-            rtxt_importStusLog.AppendText($"\n \u2705 Created currency : {currency_code}");
+            currencies.CreateOrUpdate_Currency(chk_overwriteExistData.Checked, currency_code, currency_word);
+
+            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} currency : {currency_code}");
         }
 
-        private void ProcessImport_Debtor(DbfDataReader.DbfDataReader dbfDataReader)
+        private void ProcessImport_Debtor(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
         {
             Debtor debtor = new Debtor(Program.session);
+            DisplayTerms terms = new DisplayTerms(Program.session);
 
             string acc_no = dbfDataReader.GetString(1);
             string acc_name = dbfDataReader.GetString(2);
+            string display_term = dbfDataReader.GetString(25);
 
-            debtor.CreateNewDebtor(dbfDataReader);
+            string sts_word = DefStatus();
 
-            rtxt_importStusLog.AppendText($"\n \u2705 Added debtor : {acc_no} --- {acc_name}");
+            debtor.CreateOrUpdate_Debtor(chk_overwriteExistData.Checked, dbfDataReader);
+
+            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} debtor : {acc_no} - {acc_name}");
         }
 
-        private void ProcessImport_Creditor(DbfDataReader.DbfDataReader dbfDataReader)
+        private void ProcessImport_Creditor(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
         {
             Creditor creditor = new Creditor(Program.session);
+            DisplayTerms terms = new DisplayTerms(Program.session);
 
             string acc_no = dbfDataReader.GetString(1);
             string acc_name = dbfDataReader.GetString(2);
+            string display_term = dbfDataReader.GetString(25);
 
-            creditor.CreateNewCreditor(dbfDataReader);
+            string sts_word = DefStatus();
 
-            rtxt_importStusLog.AppendText($"\n \u2705 Added creditor : {acc_no} --- {acc_name}");
+            creditor.CreateOrUpdate_Creditor(chk_overwriteExistData.Checked, dbfDataReader);
+
+            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} creditor : {acc_no} - {acc_name}");
         }
 
+        private void ReformatAccNo(string acc_no)
+        {
+            if (chk_reformatAccNo.Checked)
+            {
+
+            }
+        }
+        
         private void OpenFolderDialog(string desc, Control control)
         {
             using (FolderBrowserDialog ofd = new FolderBrowserDialog())
@@ -482,7 +560,7 @@ namespace PlugIn_1.Forms
                     {
                         MessageBox.Show(
                             ex.Message,
-                            $"External error from {ex.GetBaseException().GetType().BaseType.ToString()}",
+                            $"External error from {ex.GetBaseException().GetType().Name}",
                             MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
@@ -525,6 +603,8 @@ namespace PlugIn_1.Forms
                     else if (nud_recRangeEnd.Value == 0)
                     {
                         row.Cells["Start From Record"].Value = "-";
+
+                        nud_recRangeStart.Maximum = 0;
                     }
 
                     nud_recRangeStart.Minimum = nud_recRangeEnd.Value > 0 ? 1 : 0;
@@ -569,5 +649,10 @@ namespace PlugIn_1.Forms
         //{
 
         //}
+
+        private string DefStatus()
+        {
+            return chk_overwriteExistData.Checked ? "Updated" : "Added new";
+        }
     }
 }
