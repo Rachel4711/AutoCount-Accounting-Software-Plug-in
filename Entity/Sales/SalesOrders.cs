@@ -178,7 +178,7 @@ namespace PlugIn_1.Entity
                 tblAllDocNO.Rows.Add(nRow);
                 command.Save(null);
             }
-            catch (ConstraintException ex)
+            catch (ConstraintException)
             {
 
             }

@@ -1,7 +1,9 @@
 ﻿using AutoCount.ARAP.Creditor;
 using AutoCount.Authentication;
+using AutoCount.Data;
 using AutoCount.Data.EntityFramework;
 using AutoCount.GL;
+using AutoCount.RegistryID;
 using PlugIn_1.Entity.General_Maintainance;
 using System;
 using System.Collections.Generic;
@@ -21,11 +23,12 @@ namespace PlugIn_1.Entity.Account
             session = userSession;
         }
 
-        public void CreateNewCreditor(DbfDataReader.DbfDataReader dbfDataReader)
+        public void CreateOrUpdate_Creditor(bool isOverwrite, DbfDataReader.DbfDataReader dbfDataReader)
         {
             CreditorDataAccess cmd = CreditorDataAccess.Create(session, session.DBSetting);
-            
-            CreditorEntity creditor = cmd.NewCreditor();
+
+            CreditorEntity creditor = isOverwrite ?
+                cmd.GetCreditor(dbfDataReader.GetString(1)) : cmd.NewCreditor();
 
             creditor.ControlAccount = getDefaultCtrlAcc();
 
@@ -42,11 +45,11 @@ namespace PlugIn_1.Entity.Account
             creditor.Fax1            = dbfDataReader.GetString(17);
             creditor.EmailAddress    = dbfDataReader.GetString(18);
             creditor.WebURL          = dbfDataReader.GetString(19);
-            creditor.AreaCode        = dbfDataReader.GetString(22).Equals("") ? setDefArea() : dbfDataReader.GetString(22);
-            creditor.PurchaseAgent   = dbfDataReader.GetString(23).Equals("") ? setDefPurchaseAgent() : dbfDataReader.GetString(23);
-            creditor.DisplayTerm     = dbfDataReader.GetString(25).Equals("") ? creditor.DisplayTerm : dbfDataReader.GetString(25);
+            creditor.AreaCode        = setArea         (dbfDataReader.GetString(22));
+            creditor.PurchaseAgent   = setPurchaseAgent(dbfDataReader.GetString(23));
+            creditor.CurrencyCode    = setCurrency(session.DBSetting, dbfDataReader.GetString(27));
+            creditor.DisplayTerm     = setDisplayTerm(creditor.DisplayTerm, dbfDataReader.GetString(25));
             creditor.CreditLimit     = dbfDataReader.GetDecimal(26);
-            creditor.CurrencyCode    = dbfDataReader.GetString(27).Equals("") ? AccountBookLocalCurrency(session.DBSetting) : dbfDataReader.GetString(27); ;
 
             if (!isCreditorCtrlAcc(creditor.ControlAccount))
             {
@@ -69,30 +72,40 @@ namespace PlugIn_1.Entity.Account
 
             return accountHelper.GetCreditorControlAccounts().First();
         }
-        private string setDefPurchaseAgent()
-        {
-            Agents agent = new Agents(session);
 
-            return agent.NewAgent("100-001", "Kim", "kim@gmail.com");
-        }
-
-        private string setDefArea()
+        private string setArea(string cust_area)
         {
             Areas area = new Areas(session);
 
-            return area.NewArea("KL", "Kuala Lumpur");
+            return area.hasAreas(cust_area) ?
+                cust_area : cust_area != "" ?
+                area.CreateOrUpdate_Area(false, cust_area) : null;
         }
 
-        private string setDefCurrency()
+        private string setPurchaseAgent(string cust_agent)
+        {
+            Agents agent = new Agents(session);
+
+            return agent.hasPurchaseAgents(cust_agent) ?
+                    cust_agent : cust_agent != "" ?
+                    agent.CreateOrUpdate_PurchaseAgent(false, cust_agent) : null;
+        }
+
+        private string setDisplayTerm(string default_term, string term)
+        {
+            DisplayTerms terms = new DisplayTerms(Program.session);
+
+            return terms.hasDisplayTerm(term) ?
+                term : term != "" ?
+                terms.Create_DisplayTerm(term) : default_term;
+        }
+
+        public string setCurrency(DBSetting dbSetting, string currency_code)
         {
             Currencies currencies = new Currencies(session);
 
-            return currencies.NewCurrency("KRW", "Korean Weon");
-        }
-
-        public string AccountBookLocalCurrency(AutoCount.Data.DBSetting dbSetting)
-        {
-            return AutoCount.Data.DBRegistry.Create(dbSetting).GetString(new AutoCount.RegistryID.LocalCurrencyCode());
+            return currencies.hasCurrency(currency_code) ?
+                currency_code : DBRegistry.Create(dbSetting).GetString(new LocalCurrencyCode());
         }
     }
 }

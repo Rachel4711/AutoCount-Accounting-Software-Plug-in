@@ -3,8 +3,12 @@ using AutoCount.ARAP.Debtor;
 using AutoCount.Authentication;
 using System;
 using System.Linq;
-using AutoCount.Data.EntityFramework;
+using AutoCount.Data;
 using PlugIn_1.Entity.General_Maintainance;
+using AutoCount.RegistryID;
+using AutoCount.Document;
+using AutoCount.ARAP;
+using System.Data;
 
 namespace PlugIn_1.Entity
 {
@@ -17,11 +21,12 @@ namespace PlugIn_1.Entity
             session = userSession;
         }
 
-        internal void CreateNewDebtor(DbfDataReader.DbfDataReader dbfDataReader)
+        internal void CreateOrUpdate_Debtor(bool isOverwrite, DbfDataReader.DbfDataReader dbfDataReader)
         {
             DebtorDataAccess access = DebtorDataAccess.Create(session, session.DBSetting);
 
-            DebtorEntity debtor = access.NewDebtor();
+            DebtorEntity debtor = isOverwrite ? 
+                access.GetDebtor(dbfDataReader.GetString(1)) : access.NewDebtor();
 
             debtor.ControlAccount    = getDefaultCtrlAcc();
 
@@ -42,15 +47,15 @@ namespace PlugIn_1.Entity
             debtor.Fax1              = dbfDataReader.GetString(17);
             debtor.EmailAddress      = dbfDataReader.GetString(18);
             debtor.WebURL            = dbfDataReader.GetString(19);
-            debtor.AreaCode          = dbfDataReader.GetString(22).Equals("") ? setDefArea() : dbfDataReader.GetString(22);
-            debtor.SalesAgent        = dbfDataReader.GetString(23).Equals("") ? setDefSalesAgent() : dbfDataReader.GetString(23);
-            debtor.DisplayTerm       = dbfDataReader.GetString(25).Equals("") ? debtor.DisplayTerm : dbfDataReader.GetString(25);
+            debtor.AreaCode          = setArea       (dbfDataReader.GetString(22));
+            debtor.SalesAgent        = setSalesAgent (dbfDataReader.GetString(23));
+            debtor.DisplayTerm       = setDisplayTerm(debtor.DisplayTerm, dbfDataReader.GetString(25));
+            debtor.CurrencyCode      = setCurrency   (session.DBSetting, dbfDataReader.GetString(27));
             debtor.CreditLimit       = dbfDataReader.GetDecimal(26);
-            debtor.CurrencyCode      = dbfDataReader.GetString(27).Equals("") ? AccountBookLocalCurrency(session.DBSetting) : dbfDataReader.GetString(28);
 
             if (!isDebtorCtrlAcc(debtor.ControlAccount))
             {
-                throw new Exception($"\"{debtor.ControlAccount}\" is not a control account. Please try with another value.");
+                throw new Exception($"\"{debtor.ControlAccount}\" is not a control account.");
             }
 
             access.SaveDebtor(debtor, session.LoginUserID);
@@ -70,30 +75,39 @@ namespace PlugIn_1.Entity
             return accountHelper.GetDebtorControlAccounts().First();
         }
 
-        private string setDefSalesAgent()
-        {
-            Agents agent = new Agents(session);
-
-            return agent.NewAgent("100-001", "Kim", "kim@gmail.com");
-        }
-
-        private string setDefArea()
+        private string setArea(string cust_area)
         {
             Areas area = new Areas(session);
 
-            return area.NewArea("KL", "Kuala Lumpur");
+            return area.hasAreas(cust_area) ? 
+                cust_area : cust_area != "" ? 
+                area.CreateOrUpdate_Area(false, cust_area) : null;
         }
 
-        private string setDefCurrency()
+        private string setSalesAgent(string cust_agent)
+        {
+            Agents agent = new Agents(session);
+
+            return agent.hasSalesAgents(cust_agent) ?
+                cust_agent : cust_agent != "" ?
+                agent.CreateOrUpdate_SalesAgent(false, cust_agent) : null;
+        }
+
+        private string setDisplayTerm(string default_term, string term)
+        {
+            DisplayTerms terms = new DisplayTerms(Program.session);
+
+            return terms.hasDisplayTerm(term) ? 
+                term : term != "" ? 
+                terms.Create_DisplayTerm(term) : default_term;
+        }
+
+        public string setCurrency(DBSetting dbSetting, string currency_code)
         {
             Currencies currencies = new Currencies(session);
 
-            return currencies.NewCurrency("KRW", "Korean Weon");
-        }
-
-        public string AccountBookLocalCurrency(AutoCount.Data.DBSetting dbSetting)
-        {
-            return AutoCount.Data.DBRegistry.Create(dbSetting).GetString(new AutoCount.RegistryID.LocalCurrencyCode());
+            return currencies.hasCurrency(currency_code) ?
+                currency_code : DBRegistry.Create(dbSetting).GetString(new LocalCurrencyCode());
         }
     }
 }

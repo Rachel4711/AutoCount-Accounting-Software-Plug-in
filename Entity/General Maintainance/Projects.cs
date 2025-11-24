@@ -12,13 +12,16 @@ namespace PlugIn_1.Entity.General_Maintainance
             session = userSession;
         }
 
-        public void CreateNewProject(string desc)
+        public void CreateOrUpdate_Project(bool isOverwrite, string proj_code, string proj_desc, string proj_type)
         {
             ProjectDeptCommand cmd = ProjectDeptCommand.Create(ProjectType.Project, session);
 
-            ProjectEntity project = cmd.NewProject(ProjectLevel.Top, "");
+            ProjectLevel proj_lvl = proj_type != "P" ? ProjectLevel.Sub : ProjectLevel.Top;
 
-            project.Description = desc;
+            ProjectEntity project = isOverwrite ? cmd.GetProject(proj_code) : cmd.NewProject(proj_lvl, null);
+
+            project.ProjNo = proj_code;
+            project.Description = proj_desc;
 
             project.Save();
         }

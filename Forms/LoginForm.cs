@@ -99,13 +99,13 @@ namespace PlugIn_1.Forms
                 //User user = new User(
                 //    comboBox_ServName.Text, 
                 //    comboBox_DBName.Text,
-                //    "ADMIN",//textBox_Username.Text, 
-                //    "ADMIN"//textBox_Secret.Text
+                //    textBox_Username.Text, 
+                //    textBox_Secret.Text
                 //    );
 
                 User user = new User(
-                    "INTERN-MINIPC\\SQLEXPRESS07",
-                    "AED_MOBILE",
+                    "INTERN-MINIPC\\SQLEXPRESS08",
+                    "AED_Blank",
                     "ADMIN",
                     "ADMIN"
                     );
@@ -141,7 +141,7 @@ namespace PlugIn_1.Forms
             {
                 MessageBox.Show(
                     dex.Message,
-                    $"Exception occur: {dex.GetBaseException().GetType().BaseType.ToString()}",
+                    $"Exception occur: {dex.GetBaseException().GetType().Name}",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                 loadingGif.Visible = false;
@@ -151,7 +151,7 @@ namespace PlugIn_1.Forms
             {
                 MessageBox.Show(
                     ex.Message, 
-                    $"Exception occur: {ex.GetBaseException().GetType().BaseType.ToString()}", 
+                    $"Exception occur: {ex.GetBaseException().GetType().Name}", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                 loadingGif.Visible = false;
@@ -176,7 +176,7 @@ namespace PlugIn_1.Forms
             {
                 MessageBox.Show(
                     ex.Message,
-                    $"External error from {ex.GetBaseException().GetType().BaseType.ToString()}",
+                    $"External error from {ex.GetBaseException().GetType().Name}",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
@@ -197,7 +197,7 @@ namespace PlugIn_1.Forms
             {
                 MessageBox.Show(
                     ex.Message,
-                    $"External error from {ex.GetBaseException().GetType().BaseType.ToString()}",
+                    $"External error from {ex.GetBaseException().GetType().Name}",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 

@@ -1,10 +1,14 @@
-﻿using AutoCount.Data.EntityFramework;
-using DbfDataReader;
+﻿using DbfDataReader;
+using DevExpress.XtraRichEdit.Model;
+using PlugIn_1.Entity;
 using PlugIn_1.Entity.General_Maintainance;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Linq;
+using System.Text;
 using System.Windows.Forms;
 using Creditor = PlugIn_1.Entity.Account.Creditor;
 using Debtor = PlugIn_1.Entity.Debtor;
@@ -14,6 +18,12 @@ namespace PlugIn_1.Forms
     public partial class UBSDataMigrateForm : Form
     {
         private string exception { get; set; }
+
+        private string successes { get; set; }
+
+        private bool syncing_range = false;
+
+        private bool isPathChanging = false;
 
         public UBSDataMigrateForm()
         {
@@ -36,7 +46,8 @@ namespace PlugIn_1.Forms
                 "2. Select the entire row by click on most left side of the row.\n" +
                 "3. Set both value to 0 to import all records in the table.\n" +
                 "4. Set both value to the same number to import single record.\n" +
-                "5. The value of start < end < total records in table.",
+                "5. The value of start < end < total records in table.\n\n" +
+                "Tips: Setting record range for multiple tables is supported.",
                 "Import Range Setting Help Guide", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -52,10 +63,12 @@ namespace PlugIn_1.Forms
 
         private void txt_path_AccFolder_TextChanged(object sender, EventArgs e)
         {
-            btn_browseStkFolder.Enabled = 
-                txt_path_StkFolder.Enabled = 
-                btn_listModule.Enabled = 
+            btn_browseStkFolder.Enabled =
+                txt_path_StkFolder.Enabled =
+                btn_listModule.Enabled =
                 txt_path_AccFolder.Text.Equals("") ? false : true;
+
+            isPathChanging = true;
         }
 
         private void nud_recRangeStart_Click(object sender, EventArgs e)
@@ -70,42 +83,66 @@ namespace PlugIn_1.Forms
 
         private void nud_recRangeStart_ValueChanged(object sender, EventArgs e)
         {
-            if (nud_recRangeStart.Value != 0)
+            if (!syncing_range)
             {
                 SetRecordRange("Start From Record", nud_recRangeStart);
             }
-            CalibrateRecordRange();
         }
 
         private void nud_recRangeEnd_ValueChanged(object sender, EventArgs e)
         {
-            SetRecordRange("End To Record", nud_recRangeEnd);
-            CalibrateRecordRange();
-
-            if (nud_recRangeStart.Value > nud_recRangeEnd.Value)
+            if (!syncing_range)
             {
-                nud_recRangeStart.Value = nud_recRangeEnd.Value;
+                SetRecordRange("End To Record", nud_recRangeEnd);
+                CalibrateRecordRange();
+
+                if (nud_recRangeStart.Value > nud_recRangeEnd.Value)
+                {
+                    nud_recRangeStart.Value = nud_recRangeEnd.Value;
+                }
+            }
+            else
+            {
+                nud_recRangeStart.Minimum = nud_recRangeEnd.Value > 0 ? 1 : 0;
             }
         }
 
         private void dgv_selModImport_RowHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
         {
+            SyncRecordRange();
+        }
+
+        private void dgv_selModImport_SelectionChanged(object sender, EventArgs e)
+        {
+            SyncRecordRange();
+        }
+
+        private void btn_resetRange_Click(object sender, EventArgs e)
+        {
+            syncing_range = true;
+            
             foreach (DataGridViewRow row in dgv_selModImport.SelectedRows)
             {
-                var start = row.Cells["Start From Record"].Value.Equals("-") ?
-                    0 : row.Cells["Start From Record"].Value;
-
-                var end = row.Cells["End To Record"].Value.Equals("-") ?
-                    0 : row.Cells["End To Record"].Value;
-
-                var total = row.Cells["Total Records"].Value.Equals(0) ?
-                    0 : row.Cells["Total Records"].Value;
-
-                nud_recRangeStart.Maximum = nud_recRangeEnd.Maximum = decimal.Parse(total.ToString());
-
-                nud_recRangeEnd.Value = decimal.Parse(end.ToString());
-                nud_recRangeStart.Value = decimal.Parse(start.ToString());
+                ResetRecordRange(row);
             }
+
+            syncing_range = false;
+
+            nud_recRangeStart.Value = nud_recRangeEnd.Value = 0;
+        }
+
+        private void btn_resetAllRange_Click(object sender, EventArgs e)
+        {
+            syncing_range = true;
+            
+            foreach (DataGridViewRow row in dgv_selModImport.Rows)
+            {
+                ResetRecordRange(row);
+            }
+
+            syncing_range = false;
+
+            nud_recRangeStart.Value = nud_recRangeEnd.Value = 0;
         }
 
         private void btn_listModule_Click(object sender, EventArgs e)
@@ -117,7 +154,7 @@ namespace PlugIn_1.Forms
                     "Missing Required File Path",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            else
+            else if (isPathChanging)
             {
                 List<string> list = new List<string>();
 
@@ -125,26 +162,41 @@ namespace PlugIn_1.Forms
 
                 if (dgv_selModImport.RowCount > 0)
                 {
-                    dataSet1.Tables.Remove("Table");
+                    dataSet1.Tables.Remove("Import_Tables");
                 }
+
+                Text = "Migrate UBS Account";
+                lbl_ImportTitle.Text = "Select and Import Table";
 
                 DGVTable_Load();
 
-                UBSData_Load(txt_path_AccFolder, "gldata", "Chart of Account");
-                UBSData_Load(txt_path_AccFolder, "icagent", "Sales Agent");
+                DataTable dataTable_show = dataSet1.Tables["Import_Tables"];
+                DataTable dataTable_back = dataSet2.Tables["Stock_Tables"];
 
-                if (txt_path_StkFolder.Text != "") UBSData_Load(txt_path_StkFolder, "icagent", "Purchase Agent");
+                UBSData_Load(dataTable_show, txt_path_AccFolder, "gldata", "Chart of Account");
+                UBSData_Load(dataTable_show, txt_path_AccFolder, "icagent", "Sales Agent");
 
-                UBSData_Load(txt_path_AccFolder, "icarea", "Area");
-                UBSData_Load(txt_path_AccFolder, "project", "Project");
-                UBSData_Load(txt_path_AccFolder, "accmem", "Terms");
-                UBSData_Load(txt_path_AccFolder, "currency", "Currency");
-                UBSData_Load(txt_path_AccFolder, "arcust", "Customer");
-                UBSData_Load(txt_path_AccFolder, "apvend", "Supplier");
+                if (txt_path_StkFolder.Text != "") 
+                    UBSData_Load(dataTable_show, txt_path_StkFolder, "icagent", "Purchase Agent");
+
+                UBSData_Load(dataTable_show, txt_path_AccFolder, "icarea", "Area");
+                UBSData_Load(dataTable_show, txt_path_AccFolder, "project", "Project");
+                UBSData_Load(dataTable_show, txt_path_AccFolder, "accmem", "Terms");
+                UBSData_Load(dataTable_show, txt_path_AccFolder, "currency", "Currency");
+                UBSData_Load(dataTable_show, txt_path_AccFolder, "arcust", "Customer");
+                UBSData_Load(dataTable_show, txt_path_AccFolder, "apvend", "Supplier");
+
+                if (txt_path_StkFolder.Text != "")
+                {
+                    UBSData_Load(dataTable_show, txt_path_StkFolder, "icitem", "Item");
+                    UBSData_Load(dataTable_show, txt_path_StkFolder, "iccate", "Category");
+                    UBSData_Load(dataTable_show, txt_path_StkFolder, "icgroup", "Group");
+                    UBSData_Load(dataTable_show, txt_path_StkFolder, "iclocate", "Location");
+                }
 
                 if (exception != null)
                 {
-                    string printing_text = GenerateExceptionList(exception);
+                    string printing_text = GenerateMessageList(exception);
 
                     MessageBox.Show(
                         "The table cannot be listed because of the errors below:\n" +
@@ -155,18 +207,30 @@ namespace PlugIn_1.Forms
                 else
                 {
                     gb_dataMigrate.Enabled = txt_path_AccFolder.Equals("") ? false : true;
+
+                    try
+                    {
+                        string company_name = ExtractComName();
+
+                        Text = $"Migrate UBS Account ({company_name})";
+                        lbl_ImportTitle.Text = $"Import backup data from: {company_name}";
+                    }
+                    catch (IOException) { }
                 }
+
+                isPathChanging = false;
             }
         }
 
         private void btn_import_Click(object sender, EventArgs e)
         {
-            DataTable dataTable = dataSet1.Tables["Table"];
+            DataTable dataTable_show = dataSet1.Tables["Import_Tables"];
+            DataTable dataTable_back = dataSet2.Tables["Stock_Tables"];
 
             rtxt_importStusLog.Text = "";
             lb_copied.Visible = false;
 
-            Dictionary<string, string[]> module_rows = new Dictionary<string, string[]>();
+            Dictionary<string, string[]> table_rows = new Dictionary<string, string[]>();
             Dictionary<string, string> name_to_file = new Dictionary<string, string>()
             {
                 {"Chart of Account" , "gldata"},
@@ -174,13 +238,17 @@ namespace PlugIn_1.Forms
                 {"Purchase Agent"   , "icagent"},
                 {"Area"             , "icarea"},
                 {"Project"          , "project"},
-                {""            , "accmem"},
+                {"Terms"            , ""},
                 {"Currency"         , "currency"},
                 {"Customer"         , "arcust"},
                 {"Supplier"         , "apvend"},
+                {"Item"             , "icitem"},
+                {"Category"         , "iccate"},
+                {"Group"            , "icgroup"},
+                {"Location"         , "iclocate"}
             };
 
-            string[] stk_module_name =
+            string[] stk_table_name =
             {
                 "Purchase Agent",
                 "Category",
@@ -190,15 +258,15 @@ namespace PlugIn_1.Forms
                 "icl3p"
             };
 
-            foreach (DataRow row in dataTable.Rows)
+            foreach (DataRow row in dataTable_show.Rows)
             {
                 if ((bool)row["Select"])
                 {
-                    module_rows.Add(
-                        row["Module Name"].ToString(),                      // Module(Table) name --> KEY
+                    table_rows.Add(
+                        row["Table Name"].ToString(),                      // Table name --> KEY
                         new string[]
                         {
-                            name_to_file[row["Module Name"].ToString()],    // File name
+                            name_to_file[row["Table Name"].ToString()],    // File name
                             row["Start From Record"].ToString(),
                             row["End To Record"].ToString(),
                             row["Total Records"].ToString()
@@ -207,25 +275,42 @@ namespace PlugIn_1.Forms
                 }
             }
 
-            if (module_rows.Count > 0)
+            if (dataTable_back.Rows.Count > 0)
+            {
+                foreach (DataRow row in dataTable_back.Rows)
+                {
+                    table_rows.Add(
+                        row["Table Name"].ToString(),                      // Table name --> KEY
+                        new string[]
+                        {
+                            name_to_file[row["Table Name"].ToString()],    // File name
+                            row["Start From Record"].ToString(),
+                            row["End To Record"].ToString(),
+                            row["Total Records"].ToString()
+                        }
+                    );
+                }
+            }
+
+            if (table_rows.Count > 0)
             {
                 exception = null;
 
-                foreach (KeyValuePair<string, string[]> module in module_rows)
+                foreach (KeyValuePair<string, string[]> table in table_rows)
                 {
-                    string dbf_file_path = stk_module_name.Contains(module.Key) ? // Take from stock folder if is stock table, else take from account folder.
+                    string dbf_file_path = stk_table_name.Contains(table.Key) ? // Take from stock folder if is stock table, else take from account folder.
                         txt_path_StkFolder.Text : txt_path_AccFolder.Text;
 
-                    UBSData_Import(dbf_file_path, module.Key, module.Value);
+                    UBSData_Import(dbf_file_path, table.Key, table.Value);
                 }
 
                 if (exception != null)
                 {
-                    exception = GenerateExceptionList(exception);
+                    exception = GenerateMessageList(exception);
 
                     MessageBox.Show(
                         "Exceptions has occur when migrating the table below:\n" +
-                        exception + "\n" +
+                        $"{exception}\n" +
                         "Please review the status log for more information.",
                         $"Data migration contains error",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -233,7 +318,9 @@ namespace PlugIn_1.Forms
                 else
                 {
                     MessageBox.Show(
-                        "",
+                        "All selected table has successfully imported.\n" +
+                        "Please check the data migration information below:\n" +
+                        $"{successes}\n",
                         "Data migration successful",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -267,9 +354,9 @@ namespace PlugIn_1.Forms
         private void UBSDataMigrateForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             bool changeMade = (
-                (txt_path_AccFolder.Text.Equals("") && txt_path_StkFolder.Text.Equals("")) ||
-                dgv_selModImport.Rows.Count == 0
-                ) ? false : true;
+                (!txt_path_AccFolder.Text.Equals("") && !txt_path_StkFolder.Text.Equals("")) ||
+                dgv_selModImport.Rows.Count > 0
+                ) ? true : false;
 
             if (changeMade)
             {
@@ -286,23 +373,28 @@ namespace PlugIn_1.Forms
 
         private void DGVTable_Load()
         {
-            DataTable dataTable = new DataTable("Table");
+            DataTable dataTable_display = new DataTable("Import_Tables");
+            DataTable dataTable_backing = new DataTable("Stock_Tables");
 
-            dataTable.Columns.Add("Select", typeof(bool));
-            dataTable.Columns.Add("Module Name", typeof(string));
-            dataTable.Columns.Add("Start From Record", typeof(object));
-            dataTable.Columns.Add("End To Record", typeof(object));
-            dataTable.Columns.Add("Total Records", typeof(int));
+            dataTable_display.Columns.Add("Select", typeof(bool));
+            dataTable_display.Columns.Add("Table Name", typeof(string));
+            dataTable_display.Columns.Add("Start From Record", typeof(object));
+            dataTable_display.Columns.Add("End To Record", typeof(object));
+            dataTable_display.Columns.Add("Total Records", typeof(int));
 
-            DataColumn[] column = {dataTable.Columns[1]};
-            dataTable.PrimaryKey = column;
+            dataTable_backing.Columns.Add("Select", typeof(bool));
+            dataTable_backing.Columns.Add("Table Name", typeof(string));
+            dataTable_backing.Columns.Add("Start From Record", typeof(object));
+            dataTable_backing.Columns.Add("End To Record", typeof(object));
+            dataTable_backing.Columns.Add("Total Records", typeof(int));
 
-            if (dataSet1.Tables["Table"] == null)
-            {
-                dataSet1.Tables.Add(dataTable);
-            }
+            DataColumn[] column = { dataTable_display.Columns[1] };
+            dataTable_display.PrimaryKey = column;
 
-            dgv_selModImport.DataSource = dataSet1.Tables["Table"];
+            if (dataSet1.Tables["Import_Tables"] == null) dataSet1.Tables.Add(dataTable_display);
+            if (dataSet2.Tables["Stock_Tables"] == null) dataSet2.Tables.Add(dataTable_backing);
+
+            dgv_selModImport.DataSource = dataSet1.Tables["Import_Tables"];
 
             dgv_selModImport.Columns[0].Width = 50;
             dgv_selModImport.Columns[1].Width = 200;
@@ -310,16 +402,16 @@ namespace PlugIn_1.Forms
             dgv_selModImport.Columns[3].Width = 100;
             dgv_selModImport.Columns[4].Width = 95;
 
+            dgv_selModImport.Columns[0].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             dgv_selModImport.Columns[1].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dgv_selModImport.Columns[2].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dgv_selModImport.Columns[3].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dgv_selModImport.Columns[4].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dgv_selModImport.Columns[0].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
         }
 
-        private void UBSData_Load(TextBox textBox, string dbf_file_name, string module_name)
+        private void UBSData_Load(DataTable target_table, TextBox textBox, string dbf_file_name, string table_name)
         {
-            DataTable dataTable = dataSet1.Tables["Table"];
+            DataTable dataTable = target_table;
 
             string file_path = $"{textBox.Text}\\{dbf_file_name}.dbf";
             int total_rec = 0;
@@ -336,27 +428,27 @@ namespace PlugIn_1.Forms
                     while (dbfDataReader.Read()) total_rec++;
                 }
 
-                if (dataTable.Rows.Find(module_name) == null)
+                if (dataTable.Rows.Find(table_name) == null)
                 {
-                    dataTable.Rows.Add(false, module_name, "-", "-", total_rec);
+                    dataTable.Rows.Add(false, table_name, "-", "-", total_rec);
                 }
             }
             catch (Exception ex)
             {
-                exception += $"{dbf_file_name} ({module_name})|{ex.Message}\n";
+                exception += $"{dbf_file_name} ({table_name})|{ex.Message}\n";
             }
         }
 
-        private void UBSData_Import(string dbf_file_path, string module_name, string[] module_details)
+        private void UBSData_Import(string dbf_file_path, string table_name, string[] table_details)
         {
-            string file_path = $"{dbf_file_path}\\{module_details[0]}.dbf";
-            
-            int start_from_rec   = module_details[1].Equals("-") ? 1 : int.Parse(module_details[1]);
-            int end_to_rec       = module_details[2].Equals("-") ? 0 : int.Parse(module_details[2]);
-            int total_rec = int.Parse(module_details[3]);
+            string file_path = $"{dbf_file_path}\\{table_details[0]}.dbf";
+
+            int start_from_rec = table_details[1].Equals("-") ? 1 : int.Parse(table_details[1]);
+            int end_to_rec = table_details[2].Equals("-") ? 0 : int.Parse(table_details[2]);
+            int total_rec = int.Parse(table_details[3]);
 
             end_to_rec = end_to_rec == 0 ? total_rec : end_to_rec;
-            
+
             int current_record = 0, success = 0, failure = 0;
 
             var options = new DbfDataReaderOptions
@@ -366,7 +458,7 @@ namespace PlugIn_1.Forms
 
             using (var dbfDataReader = new DbfDataReader.DbfDataReader(file_path, options))
             {
-                rtxt_importStusLog.AppendText($" \u25B6 Start import {module_name} data from record number {start_from_rec} to {end_to_rec}.\n");
+                rtxt_importStusLog.AppendText($" \u25B6 Start import {table_name} data from record number {start_from_rec} to {end_to_rec}.\n");
 
                 while (dbfDataReader.Read())
                 {
@@ -377,7 +469,7 @@ namespace PlugIn_1.Forms
                         txt_currentRecNo.Text = current_record.ToString();
                         try
                         {
-                            switch (module_name)
+                            switch (table_name)
                             {
                                 case "Sales Agent":
                                     ProcessImport_SalesAgent(dbfDataReader, current_record);
@@ -400,22 +492,32 @@ namespace PlugIn_1.Forms
                                 case "Supplier":
                                     ProcessImport_Creditor(dbfDataReader, current_record);
                                     break;
+                                case "Category":
+                                    ProcessImport_ItemCategory(dbfDataReader, current_record);
+                                    break;
+                                case "Group":
+                                    ProcessImport_ItemGroup(dbfDataReader, current_record);
+                                    break;
+                                case "Item":
+                                    ProcessImport_Item(dbfDataReader, current_record);
+                                    break;
                                 default:
-                                    throw new Exception($"{module_details[0]}({module_name}) does not belong to the backup data table.");
+                                    exception += $"{table_details[0]}({table_name}) does not belong to the backup data table.\n";
+                                    break;
                             }
                             success++;
                         }
                         catch (Exception ex)
                         {
-                            exception += $"{module_name}|{ex.GetType().Name}\n";
+                            exception += $"\nTable: {table_name}\n|- {ex.GetType().Name}\n>";
 
                             string exc_msg;
 
                             try
                             {
                                 exc_msg = $"{ex.InnerException.Message}: {ex.Message}";
-                            } 
-                            catch (NullReferenceException) 
+                            }
+                            catch (NullReferenceException)
                             {
                                 exc_msg = ex.Message;
                             }
@@ -428,8 +530,9 @@ namespace PlugIn_1.Forms
                     rtxt_importStusLog.ScrollToCaret();
                 }
             }
+            successes += $"\n- {table_name} |(total {total_rec} records, {success} imported (No. {start_from_rec} to {end_to_rec})) \n>";
 
-            rtxt_importStusLog.AppendText($"\n\n \u24BE Data migration of {module_name} has been completed. ({success} success, {failure} failed)\n\n");
+            rtxt_importStusLog.AppendText($"\n\n \u24BE Data migration of {table_name} has been completed. ({success} success, {failure} failed)\n\n");
             rtxt_importStusLog.ScrollToCaret();
         }
 
@@ -527,13 +630,51 @@ namespace PlugIn_1.Forms
 
             string acc_no = dbfDataReader.GetString(1);
             string acc_name = dbfDataReader.GetString(2);
-            string display_term = dbfDataReader.GetString(25);
 
             string sts_word = DefStatus();
 
             creditor.CreateOrUpdate_Creditor(chk_overwriteExistData.Checked, dbfDataReader);
 
             rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} creditor : {acc_no} - {acc_name}");
+        }
+
+        private void ProcessImport_ItemGroup(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
+        {
+            StockItem item = new StockItem(Program.session);
+
+            string short_code = dbfDataReader.GetString(0);
+            string desc = dbfDataReader.GetString(1);
+
+            string sts_word = DefStatus();
+
+            item.CreateOrUpdate_ItemGroup(chk_overwriteExistData.Checked, dbfDataReader);
+
+            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} item category : {short_code} ({desc})");
+        }
+
+        private void ProcessImport_ItemCategory(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
+        {
+            StockItem item = new StockItem(Program.session);
+
+            string short_code = dbfDataReader.GetString(0);
+            string desc = dbfDataReader.GetString(1);
+
+            string sts_word = DefStatus();
+
+            item.CreateOrUpdate_ItemCategory(chk_overwriteExistData.Checked, dbfDataReader);
+
+            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} item category : {short_code} ({desc})");
+        }
+
+        private void ProcessImport_Item(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
+        {
+            StockItem item = new StockItem(Program.session);
+
+            string sts_word = DefStatus();
+
+            item.CreateOrUpdate_Item(chk_overwriteExistData.Checked, dbfDataReader);
+
+            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} stock item : {dbfDataReader.GetString(1)}");
         }
 
         private void ReformatAccNo(string acc_no)
@@ -543,7 +684,7 @@ namespace PlugIn_1.Forms
 
             }
         }
-        
+
         private void OpenFolderDialog(string desc, Control control)
         {
             using (FolderBrowserDialog ofd = new FolderBrowserDialog())
@@ -565,6 +706,31 @@ namespace PlugIn_1.Forms
                     }
                 }
             }
+        }
+
+        private string ExtractComName()
+        {
+            var mmf = MemoryMappedFile.CreateFromFile($"{txt_path_AccFolder.Text}\\ACCOUNT.MEM");
+            
+            var accessor = mmf.CreateViewAccessor(offset: 0, size: 0);
+
+            byte[] stringBytes = new byte[5000];
+            accessor.ReadArray(0, stringBytes, 0, 5000);
+
+            string text = Encoding.ASCII.GetString(stringBytes).Replace("\0", "").Replace("\u0001", "");
+
+            while (!text.StartsWith("COMPANY")) text = text.Remove(0, 1);
+
+            char[] new_text = new char[85];
+            text.CopyTo(0, new_text, 0, 85);
+            text = "";
+
+            foreach (char c in new_text)
+            {
+                text += c;
+            }
+
+            return text.Trim().Remove(0, 10);
         }
 
         private void SetRecordRange(string column, NumericUpDown nud)
@@ -614,41 +780,72 @@ namespace PlugIn_1.Forms
             dgv_selModImport.Refresh();
         }
 
-        private string GenerateExceptionList(string exception)
+        private void SyncRecordRange()
         {
-            string[] prime_arr = exception.Split('\n');
-            string printing_text = "";
-            string previous_ex = "";
-            string previous_table = "";
-
-            foreach (string prime in prime_arr)
+            syncing_range = true;
+            
+            foreach (DataGridViewRow row in dgv_selModImport.SelectedRows)
             {
-                string[] arr = prime.Split('|');
+                var start = row.Cells["Start From Record"].Value.Equals("-") ?
+                    0 : row.Cells["Start From Record"].Value;
 
-                try
+                var end = row.Cells["End To Record"].Value.Equals("-") ?
+                    0 : row.Cells["End To Record"].Value;
+
+                var total = row.Cells["Total Records"].Value.Equals(0) ?
+                    0 : row.Cells["Total Records"].Value;
+
+                nud_recRangeStart.Maximum = nud_recRangeEnd.Maximum = decimal.Parse(total.ToString());
+                
+                nud_recRangeEnd.Value = decimal.Parse(end.ToString());
+                nud_recRangeStart.Value = decimal.Parse(start.ToString());
+            }
+
+            syncing_range = false;
+        }
+
+        private void ResetRecordRange(DataGridViewRow row)
+        {
+            if (!row.Cells["Start From Record"].Value.Equals("-") || !row.Cells["End To Record"].Value.Equals("-"))
+            {
+                row.Cells["Start From Record"].Value = row.Cells["End To Record"].Value = "-";
+            }
+        }
+
+        private string GenerateMessageList(string msg_strean)
+        {
+            List<string[]> exc_list = new List<string[]>();
+            
+            string[] exc = msg_strean.Split('>');
+            string printing_text = "";
+            string previous_table = "";
+            string previous_ex = "";
+
+            foreach (string exc_list_arr in exc)
+            {
+                exc_list.Add(exc_list_arr.Split('|'));
+            }
+
+            exc_list.Sort((prev, cur) => prev[0].CompareTo(cur[0]));
+
+            foreach (string[] exc_list_item in exc_list)
+            {
+                if (previous_table != exc_list_item[0])
                 {
-                    if (arr[1] != previous_ex)
-                    {
-                        previous_ex = arr[1];
-                        printing_text += "\nError: " + arr[1] + "\n";
-                    }
+                    previous_ex = "";
+                    previous_table = exc_list_item[0];
+                    printing_text += exc_list_item[0].Equals("") ? "" : $"\n{exc_list_item[0]}";
                 }
-                catch (IndexOutOfRangeException) { }
 
-                if (arr[0] != previous_table)
+                if (exc_list_item.Length > 1 && !exc_list_item[1].Equals(previous_ex))
                 {
-                    previous_table = arr[0];
-                    printing_text += prime.Equals("") ? "" : "- " + arr[0] + "\n";
+                    previous_ex = exc_list_item[1];
+                    printing_text += exc_list_item[0].Equals("") ? "" : $"{exc_list_item[1]}";
                 }
             }
 
             return printing_text;
         }
-
-        //private string GenerateSuccessList(string success)
-        //{
-
-        //}
 
         private string DefStatus()
         {

@@ -35,7 +35,7 @@ namespace PlugIn_1.Forms
 
             try
             {
-                stockItem.CreateUpdateItem();
+                //stockItem.CreateUpdateItem();
 
                 MessageBox.Show("Added new stock item: {item_code}.");
             }
@@ -51,7 +51,7 @@ namespace PlugIn_1.Forms
 
             try
             {
-                stockItem.CreateUpdateLocation();
+                //stockItem.CreateUpdateLocation();
 
                 MessageBox.Show("Added new location: {item_code}.");
             }

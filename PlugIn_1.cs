@@ -2,6 +2,7 @@
 using AutoCount.Data;
 using AutoCount.PlugIn;
 using AutoCount.Tax.TaxEntityMaintenance;
+using DbfDataReader;
 using DevExpress.Utils.Extensions;
 using Microsoft.EntityFrameworkCore.Storage;
 using PlugIn_1.StartUp;
@@ -49,8 +50,6 @@ namespace PlugIn_1
         public override void GetLicenseStatus(LicenseStatusArgs e)
         {
             base.GetLicenseStatus(e);
-
-
         }
 
         public UserSession InitiateUserSessionUnattendedWithUI(string serverName, string dbName, string userLogin, string userPasswd)
@@ -111,6 +110,26 @@ namespace PlugIn_1
             }
 
             return databases;
+        }
+
+        public List<string> getStringFromDBF(string file_path, int col_index)
+        {
+            var options = new DbfDataReaderOptions
+            {
+                SkipDeletedRecords = true
+            };
+
+            List<string> records = new List<string>();
+            
+            using (var dbfDataReader = new DbfDataReader.DbfDataReader(file_path, options))
+            {
+                while (dbfDataReader.Read())
+                {
+                    records.Add(dbfDataReader.GetString(col_index));
+                }
+            }
+
+            return records;
         }
     }
 }

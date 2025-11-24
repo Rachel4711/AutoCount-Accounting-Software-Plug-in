@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
             this.label_Debtor_Title = new System.Windows.Forms.Label();
             this.txt_path_AccFolder = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
@@ -39,7 +39,7 @@
             this.btn_browseAccFolder = new System.Windows.Forms.Button();
             this.btn_help = new System.Windows.Forms.Button();
             this.btn_listModule = new System.Windows.Forms.Button();
-            this.label2 = new System.Windows.Forms.Label();
+            this.lbl_ImportTitle = new System.Windows.Forms.Label();
             this.label7 = new System.Windows.Forms.Label();
             this.nud_recRangeStart = new System.Windows.Forms.NumericUpDown();
             this.label8 = new System.Windows.Forms.Label();
@@ -54,16 +54,20 @@
             this.label12 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
             this.gb_dataMigrate = new System.Windows.Forms.GroupBox();
+            this.btn_resetAllRange = new System.Windows.Forms.Button();
+            this.btn_resetRange = new System.Windows.Forms.Button();
+            this.chk_overwriteExistData = new System.Windows.Forms.CheckBox();
             this.chk_reformatAccNo = new System.Windows.Forms.CheckBox();
             this.label6 = new System.Windows.Forms.Label();
             this.btn_rangeHelp = new System.Windows.Forms.Button();
             this.lb_copied = new System.Windows.Forms.Label();
-            this.chk_overwriteExistData = new System.Windows.Forms.CheckBox();
+            this.dataSet2 = new System.Data.DataSet();
             ((System.ComponentModel.ISupportInitialize)(this.nud_recRangeStart)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataSet1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgv_selModImport)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_recRangeEnd)).BeginInit();
             this.gb_dataMigrate.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataSet2)).BeginInit();
             this.SuspendLayout();
             // 
             // label_Debtor_Title
@@ -168,29 +172,29 @@
             // 
             this.btn_listModule.Enabled = false;
             this.btn_listModule.Font = new System.Drawing.Font("Microsoft YaHei UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btn_listModule.Location = new System.Drawing.Point(15, 198);
+            this.btn_listModule.Location = new System.Drawing.Point(17, 48);
             this.btn_listModule.Name = "btn_listModule";
             this.btn_listModule.Size = new System.Drawing.Size(162, 29);
             this.btn_listModule.TabIndex = 36;
-            this.btn_listModule.Text = "List Table";
+            this.btn_listModule.Text = "Load Table";
             this.btn_listModule.UseVisualStyleBackColor = true;
             this.btn_listModule.Click += new System.EventHandler(this.btn_listModule_Click);
             // 
-            // label2
+            // lbl_ImportTitle
             // 
-            this.label2.AutoSize = true;
-            this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(12, 16);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(176, 18);
-            this.label2.TabIndex = 37;
-            this.label2.Text = "Select and Import Module";
+            this.lbl_ImportTitle.AutoSize = true;
+            this.lbl_ImportTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lbl_ImportTitle.Location = new System.Drawing.Point(12, 16);
+            this.lbl_ImportTitle.Name = "lbl_ImportTitle";
+            this.lbl_ImportTitle.Size = new System.Drawing.Size(163, 18);
+            this.lbl_ImportTitle.TabIndex = 37;
+            this.lbl_ImportTitle.Text = "Select and Import Table";
             // 
             // label7
             // 
             this.label7.AutoSize = true;
             this.label7.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label7.Location = new System.Drawing.Point(14, 131);
+            this.label7.Location = new System.Drawing.Point(16, 100);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(107, 16);
             this.label7.TabIndex = 40;
@@ -198,7 +202,7 @@
             // 
             // nud_recRangeStart
             // 
-            this.nud_recRangeStart.Location = new System.Drawing.Point(108, 196);
+            this.nud_recRangeStart.Location = new System.Drawing.Point(110, 151);
             this.nud_recRangeStart.Name = "nud_recRangeStart";
             this.nud_recRangeStart.Size = new System.Drawing.Size(69, 20);
             this.nud_recRangeStart.TabIndex = 41;
@@ -210,11 +214,11 @@
             this.label8.AutoSize = true;
             this.label8.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label8.ForeColor = System.Drawing.SystemColors.WindowFrame;
-            this.label8.Location = new System.Drawing.Point(14, 170);
+            this.label8.Location = new System.Drawing.Point(16, 127);
             this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(66, 16);
+            this.label8.Size = new System.Drawing.Size(91, 16);
             this.label8.TabIndex = 43;
-            this.label8.Text = "End to no.";
+            this.label8.Text = "Import until no.";
             // 
             // dataSet1
             // 
@@ -233,12 +237,13 @@
             this.dgv_selModImport.Location = new System.Drawing.Point(199, 48);
             this.dgv_selModImport.Name = "dgv_selModImport";
             this.dgv_selModImport.RowHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.None;
-            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
-            this.dgv_selModImport.RowsDefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
+            this.dgv_selModImport.RowsDefaultCellStyle = dataGridViewCellStyle3;
             this.dgv_selModImport.ShowEditingIcon = false;
             this.dgv_selModImport.Size = new System.Drawing.Size(589, 168);
             this.dgv_selModImport.TabIndex = 45;
             this.dgv_selModImport.RowHeaderMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.dgv_selModImport_RowHeaderMouseClick);
+            this.dgv_selModImport.SelectionChanged += new System.EventHandler(this.dgv_selModImport_SelectionChanged);
             // 
             // btn_import
             // 
@@ -264,7 +269,7 @@
             // 
             // nud_recRangeEnd
             // 
-            this.nud_recRangeEnd.Location = new System.Drawing.Point(108, 168);
+            this.nud_recRangeEnd.Location = new System.Drawing.Point(110, 125);
             this.nud_recRangeEnd.Name = "nud_recRangeEnd";
             this.nud_recRangeEnd.Size = new System.Drawing.Size(69, 20);
             this.nud_recRangeEnd.TabIndex = 50;
@@ -332,13 +337,16 @@
             // gb_dataMigrate
             // 
             this.gb_dataMigrate.BackColor = System.Drawing.SystemColors.Control;
+            this.gb_dataMigrate.Controls.Add(this.btn_resetAllRange);
+            this.gb_dataMigrate.Controls.Add(this.btn_resetRange);
             this.gb_dataMigrate.Controls.Add(this.chk_overwriteExistData);
+            this.gb_dataMigrate.Controls.Add(this.btn_listModule);
             this.gb_dataMigrate.Controls.Add(this.chk_reformatAccNo);
             this.gb_dataMigrate.Controls.Add(this.label6);
             this.gb_dataMigrate.Controls.Add(this.btn_rangeHelp);
             this.gb_dataMigrate.Controls.Add(this.lb_copied);
             this.gb_dataMigrate.Controls.Add(this.label5);
-            this.gb_dataMigrate.Controls.Add(this.label2);
+            this.gb_dataMigrate.Controls.Add(this.lbl_ImportTitle);
             this.gb_dataMigrate.Controls.Add(this.label12);
             this.gb_dataMigrate.Controls.Add(this.btn_copyImportStus);
             this.gb_dataMigrate.Controls.Add(this.label7);
@@ -356,6 +364,40 @@
             this.gb_dataMigrate.Size = new System.Drawing.Size(803, 592);
             this.gb_dataMigrate.TabIndex = 57;
             this.gb_dataMigrate.TabStop = false;
+            // 
+            // btn_resetAllRange
+            // 
+            this.btn_resetAllRange.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btn_resetAllRange.Location = new System.Drawing.Point(17, 177);
+            this.btn_resetAllRange.Name = "btn_resetAllRange";
+            this.btn_resetAllRange.Size = new System.Drawing.Size(87, 24);
+            this.btn_resetAllRange.TabIndex = 62;
+            this.btn_resetAllRange.Text = "Reset All";
+            this.btn_resetAllRange.UseVisualStyleBackColor = true;
+            this.btn_resetAllRange.Click += new System.EventHandler(this.btn_resetAllRange_Click);
+            // 
+            // btn_resetRange
+            // 
+            this.btn_resetRange.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btn_resetRange.Location = new System.Drawing.Point(110, 177);
+            this.btn_resetRange.Name = "btn_resetRange";
+            this.btn_resetRange.Size = new System.Drawing.Size(69, 24);
+            this.btn_resetRange.TabIndex = 58;
+            this.btn_resetRange.Text = "Reset";
+            this.btn_resetRange.UseVisualStyleBackColor = true;
+            this.btn_resetRange.Click += new System.EventHandler(this.btn_resetRange_Click);
+            // 
+            // chk_overwriteExistData
+            // 
+            this.chk_overwriteExistData.AutoSize = true;
+            this.chk_overwriteExistData.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
+            this.chk_overwriteExistData.Location = new System.Drawing.Point(15, 260);
+            this.chk_overwriteExistData.Name = "chk_overwriteExistData";
+            this.chk_overwriteExistData.Size = new System.Drawing.Size(378, 20);
+            this.chk_overwriteExistData.TabIndex = 61;
+            this.chk_overwriteExistData.TabStop = false;
+            this.chk_overwriteExistData.Text = "Overwrite existing data with data in selected backup folders.";
+            this.chk_overwriteExistData.UseVisualStyleBackColor = true;
             // 
             // chk_reformatAccNo
             // 
@@ -375,11 +417,11 @@
             this.label6.AutoSize = true;
             this.label6.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label6.ForeColor = System.Drawing.SystemColors.WindowFrame;
-            this.label6.Location = new System.Drawing.Point(14, 198);
+            this.label6.Location = new System.Drawing.Point(16, 153);
             this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(84, 16);
+            this.label6.Size = new System.Drawing.Size(92, 16);
             this.label6.TabIndex = 59;
-            this.label6.Text = "Start from no.";
+            this.label6.Text = "Begin from no.";
             // 
             // btn_rangeHelp
             // 
@@ -388,7 +430,7 @@
             this.btn_rangeHelp.FlatAppearance.BorderSize = 5;
             this.btn_rangeHelp.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
             this.btn_rangeHelp.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
-            this.btn_rangeHelp.Location = new System.Drawing.Point(125, 129);
+            this.btn_rangeHelp.Location = new System.Drawing.Point(127, 98);
             this.btn_rangeHelp.Name = "btn_rangeHelp";
             this.btn_rangeHelp.Size = new System.Drawing.Size(37, 21);
             this.btn_rangeHelp.TabIndex = 58;
@@ -407,17 +449,9 @@
             this.lb_copied.Text = "Log copied to clipboard";
             this.lb_copied.Visible = false;
             // 
-            // chk_overwriteExistData
+            // dataSet2
             // 
-            this.chk_overwriteExistData.AutoSize = true;
-            this.chk_overwriteExistData.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
-            this.chk_overwriteExistData.Location = new System.Drawing.Point(15, 260);
-            this.chk_overwriteExistData.Name = "chk_overwriteExistData";
-            this.chk_overwriteExistData.Size = new System.Drawing.Size(378, 20);
-            this.chk_overwriteExistData.TabIndex = 61;
-            this.chk_overwriteExistData.TabStop = false;
-            this.chk_overwriteExistData.Text = "Overwrite existing data with data in selected backup folders.";
-            this.chk_overwriteExistData.UseVisualStyleBackColor = true;
+            this.dataSet2.DataSetName = "NewDataSet";
             // 
             // UBSDataMigrateForm
             // 
@@ -427,7 +461,6 @@
             this.Controls.Add(this.button_exit);
             this.Controls.Add(this.btn_help);
             this.Controls.Add(this.btn_browseAccFolder);
-            this.Controls.Add(this.btn_listModule);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.btn_browseStkFolder);
             this.Controls.Add(this.label3);
@@ -446,6 +479,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.nud_recRangeEnd)).EndInit();
             this.gb_dataMigrate.ResumeLayout(false);
             this.gb_dataMigrate.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataSet2)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -463,7 +497,7 @@
         private System.Windows.Forms.Button btn_browseAccFolder;
         private System.Windows.Forms.Button btn_help;
         private System.Windows.Forms.Button btn_listModule;
-        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label lbl_ImportTitle;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.NumericUpDown nud_recRangeStart;
         private System.Windows.Forms.Label label8;
@@ -483,5 +517,8 @@
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.CheckBox chk_reformatAccNo;
         private System.Windows.Forms.CheckBox chk_overwriteExistData;
+        private System.Windows.Forms.Button btn_resetAllRange;
+        private System.Windows.Forms.Button btn_resetRange;
+        private System.Data.DataSet dataSet2;
     }
 }
