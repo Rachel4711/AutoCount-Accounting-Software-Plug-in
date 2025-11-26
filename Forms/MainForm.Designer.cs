@@ -32,11 +32,9 @@
             this.group_LogIn = new System.Windows.Forms.GroupBox();
             this.btn_LogIn = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.btn_purchaseInvoice = new System.Windows.Forms.Button();
             this.lbl_title = new System.Windows.Forms.Label();
             this.btn_UBS_migrate = new System.Windows.Forms.Button();
-            this.btn_salesOrder = new System.Windows.Forms.Button();
-            this.btn_stockItem = new System.Windows.Forms.Button();
+            this.button1 = new System.Windows.Forms.Button();
             this.group_LogIn.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
@@ -75,27 +73,14 @@
             // 
             // groupBox1
             // 
-            this.groupBox1.Controls.Add(this.btn_purchaseInvoice);
+            this.groupBox1.Controls.Add(this.button1);
             this.groupBox1.Controls.Add(this.lbl_title);
             this.groupBox1.Controls.Add(this.btn_UBS_migrate);
-            this.groupBox1.Controls.Add(this.btn_salesOrder);
-            this.groupBox1.Controls.Add(this.btn_stockItem);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(592, 383);
             this.groupBox1.TabIndex = 4;
             this.groupBox1.TabStop = false;
-            // 
-            // btn_purchaseInvoice
-            // 
-            this.btn_purchaseInvoice.Font = new System.Drawing.Font("Microsoft YaHei UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btn_purchaseInvoice.Location = new System.Drawing.Point(307, 242);
-            this.btn_purchaseInvoice.Name = "btn_purchaseInvoice";
-            this.btn_purchaseInvoice.Size = new System.Drawing.Size(160, 40);
-            this.btn_purchaseInvoice.TabIndex = 9;
-            this.btn_purchaseInvoice.Text = "Purchase Invoice";
-            this.btn_purchaseInvoice.UseVisualStyleBackColor = true;
-            this.btn_purchaseInvoice.Click += new System.EventHandler(this.btn_purchaseInvoice_Click);
             // 
             // lbl_title
             // 
@@ -118,35 +103,23 @@
             this.btn_UBS_migrate.UseVisualStyleBackColor = true;
             this.btn_UBS_migrate.Click += new System.EventHandler(this.btn_UBS_migrate_Click);
             // 
-            // btn_salesOrder
+            // button1
             // 
-            this.btn_salesOrder.Font = new System.Drawing.Font("Microsoft YaHei UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btn_salesOrder.Location = new System.Drawing.Point(135, 288);
-            this.btn_salesOrder.Name = "btn_salesOrder";
-            this.btn_salesOrder.Size = new System.Drawing.Size(160, 40);
-            this.btn_salesOrder.TabIndex = 5;
-            this.btn_salesOrder.Text = "Sales Order";
-            this.btn_salesOrder.UseVisualStyleBackColor = true;
-            this.btn_salesOrder.Click += new System.EventHandler(this.btn_salesOrder_Click);
-            // 
-            // btn_stockItem
-            // 
-            this.btn_stockItem.Font = new System.Drawing.Font("Microsoft YaHei UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btn_stockItem.Location = new System.Drawing.Point(135, 242);
-            this.btn_stockItem.Name = "btn_stockItem";
-            this.btn_stockItem.Size = new System.Drawing.Size(160, 40);
-            this.btn_stockItem.TabIndex = 4;
-            this.btn_stockItem.Text = "Stock Item";
-            this.btn_stockItem.UseVisualStyleBackColor = true;
-            this.btn_stockItem.Click += new System.EventHandler(this.btn_stockItem_Click);
+            this.button1.Location = new System.Drawing.Point(257, 200);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(75, 23);
+            this.button1.TabIndex = 9;
+            this.button1.Text = "button1";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(616, 407);
-            this.Controls.Add(this.group_LogIn);
             this.Controls.Add(this.groupBox1);
+            this.Controls.Add(this.group_LogIn);
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
@@ -164,10 +137,8 @@
         private System.Windows.Forms.GroupBox group_LogIn;
         private System.Windows.Forms.Button btn_LogIn;
         private System.Windows.Forms.GroupBox groupBox1;
-        private System.Windows.Forms.Button btn_salesOrder;
-        private System.Windows.Forms.Button btn_stockItem;
         private System.Windows.Forms.Button btn_UBS_migrate;
         private System.Windows.Forms.Label lbl_title;
-        private System.Windows.Forms.Button btn_purchaseInvoice;
+        private System.Windows.Forms.Button button1;
     }
 }

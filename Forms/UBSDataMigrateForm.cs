@@ -1,7 +1,8 @@
-﻿using DbfDataReader;
-using DevExpress.XtraRichEdit.Model;
+﻿using AutoCount.BackupService;
+using DbfDataReader;
 using PlugIn_1.Entity;
 using PlugIn_1.Entity.General_Maintainance;
+using PlugIn_1.Entity.Stock;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -9,6 +10,7 @@ using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 using Creditor = PlugIn_1.Entity.Account.Creditor;
 using Debtor = PlugIn_1.Entity.Debtor;
@@ -21,21 +23,58 @@ namespace PlugIn_1.Forms
 
         private string successes { get; set; }
 
+        private string db_name = Program.session.DBSetting.DBName.ToString();
+
         private bool syncing_range = false;
 
         private bool isPathChanging = false;
 
+        private Dictionary<string, string> name_to_file = new Dictionary<string, string>()
+        {
+            {"Chart of Account" , "gldata"},
+            {"Sales Agent"      , "icagent"},
+            {"Purchase Agent"   , "icagent"},
+            {"Area"             , "icarea"},
+            {"Project"          , "project"},
+            //{"Terms"            , ""},
+            {"Currency"         , "currency"},
+            {"Customer"         , "arcust"},
+            {"Supplier"         , "apvend"},
+            {"Item"             , "icitem"},
+            {"Category"         , "iccate"},
+            {"Group"            , "icgroup"},
+            {"Location"         , "iclocate"}
+        };
+
+        private string[] stk_table_name =
+        {
+            "Purchase Agent",
+            "Category",
+            "Group",
+            "Item",
+            "Location",
+            "icl3p"
+        };
+
         public UBSDataMigrateForm()
         {
             InitializeComponent();
+
+            btn_import.Cursor = Cursors.Hand;
+
+            Text = $"Migrate UBS Account ({db_name})";
         }
+
+        //Controls--------------------------------------------------------------------------------------------//
 
         private void btn_help_Click(object sender, EventArgs e)
         {
             MessageBox.Show(
-                "Use 7zip software to extract .ACC file to a new folder, and .STK file to another new folder.\r\n" +
-                "Name the folders accordingly and copy the folder paths to the corresponding field below.",
-                "Data Import Help Tip", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                "Guides to select backup folders:\n\n" +
+                "1. Use 7zip software to extract .ACC file to a new folder, and .STK file to another new folder.\n" +
+                "2. Choose the extracted folders for the corresponding folder path entry.",
+                "Data Import Help Guide", 
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void btn_rangeHelp_Click(object sender, EventArgs e)
@@ -48,7 +87,8 @@ namespace PlugIn_1.Forms
                 "4. Set both value to the same number to import single record.\n" +
                 "5. The value of start < end < total records in table.\n\n" +
                 "Tips: Setting record range for multiple tables is supported.",
-                "Import Range Setting Help Guide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                "Import Range Setting Help Guide", 
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void btn_browseAccFolder_Click(object sender, EventArgs e)
@@ -65,9 +105,14 @@ namespace PlugIn_1.Forms
         {
             btn_browseStkFolder.Enabled =
                 txt_path_StkFolder.Enabled =
-                btn_listModule.Enabled =
+                btn_listTable.Enabled =
                 txt_path_AccFolder.Text.Equals("") ? false : true;
 
+            isPathChanging = true;
+        }
+
+        private void txt_path_StkFolder_TextChanged(object sender, EventArgs e)
+        {
             isPathChanging = true;
         }
 
@@ -83,23 +128,18 @@ namespace PlugIn_1.Forms
 
         private void nud_recRangeStart_ValueChanged(object sender, EventArgs e)
         {
-            if (!syncing_range)
-            {
-                SetRecordRange("Start From Record", nud_recRangeStart);
-            }
+            if (!syncing_range) SetRecordRange("Start From Record", nud_recRangeStart);
         }
 
         private void nud_recRangeEnd_ValueChanged(object sender, EventArgs e)
         {
-            if (!syncing_range)
+            if (!syncing_range && dgv_selTblImport.SelectedRows.Count > 0)
             {
                 SetRecordRange("End To Record", nud_recRangeEnd);
                 CalibrateRecordRange();
 
                 if (nud_recRangeStart.Value > nud_recRangeEnd.Value)
-                {
                     nud_recRangeStart.Value = nud_recRangeEnd.Value;
-                }
             }
             else
             {
@@ -107,21 +147,59 @@ namespace PlugIn_1.Forms
             }
         }
 
-        private void dgv_selModImport_RowHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        private void dgv_selTblImport_Click(object sender, EventArgs e)
+        {
+            gb_recRangeSet.Enabled = 
+                dgv_selTblImport.SelectedRows.Count > 0 && !(bool)dgv_selTblImport[0, 0].Value ? 
+                true : false;
+        }
+
+        private void dgv_selTblImport_RowHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            gb_recRangeSet.Enabled = (bool)dgv_selTblImport[0, 0].Value ? false : true;
+            SyncRecordRange();
+        }
+
+        private void dgv_selTblImport_SelectionChanged(object sender, EventArgs e)
         {
             SyncRecordRange();
         }
 
-        private void dgv_selModImport_SelectionChanged(object sender, EventArgs e)
+        private void dgv_selTblImport_CurrentCellDirtyStateChanged(object sender, EventArgs e)
         {
-            SyncRecordRange();
+            if (dgv_selTblImport.IsCurrentCellDirty)
+                dgv_selTblImport.CommitEdit(DataGridViewDataErrorContexts.Commit);
+        }
+
+        private void dgv_selTblImport_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (dgv_selTblImport[1, 0].Value.Equals("Chart of Account"))
+                SetCheckBoxSelection(e);
+
+            gb_recRangeSet.Enabled =
+                dgv_selTblImport.SelectedRows.Count > 0 && !(bool)dgv_selTblImport[0, 0].Value ?
+                true : false;
+
+            if ((bool)dgv_selTblImport[0, 0].Value)
+            {
+                syncing_range = true;
+
+                foreach (DataGridViewRow row in dgv_selTblImport.Rows)
+                {
+                    ResetRecordRange(row);
+                }
+
+                nud_recRangeStart.Value = nud_recRangeEnd.Value = 0;
+
+                syncing_range = false;
+            }
         }
 
         private void btn_resetRange_Click(object sender, EventArgs e)
         {
             syncing_range = true;
             
-            foreach (DataGridViewRow row in dgv_selModImport.SelectedRows)
+            foreach (DataGridViewRow row in dgv_selTblImport.SelectedRows)
             {
                 ResetRecordRange(row);
             }
@@ -135,7 +213,7 @@ namespace PlugIn_1.Forms
         {
             syncing_range = true;
             
-            foreach (DataGridViewRow row in dgv_selModImport.Rows)
+            foreach (DataGridViewRow row in dgv_selTblImport.Rows)
             {
                 ResetRecordRange(row);
             }
@@ -145,53 +223,90 @@ namespace PlugIn_1.Forms
             nud_recRangeStart.Value = nud_recRangeEnd.Value = 0;
         }
 
-        private void btn_listModule_Click(object sender, EventArgs e)
+        private void btn_listTable_Click(object sender, EventArgs e)
         {
-            if (txt_path_AccFolder.Text.Equals(""))
+            bool isValidAccFolder = ValidateFolders(txt_path_AccFolder.Text, "ACCOUNT");
+            bool isValidStkFolder = txt_path_StkFolder.Text.Equals("") ?
+                true : (ValidateFolders(txt_path_StkFolder.Text, "STOCK") && 
+                !ValidateFolders(txt_path_StkFolder.Text, "ACCOUNT"));
+
+            if (!isValidAccFolder || !isValidStkFolder)
             {
+                string invFileErr = (!isValidAccFolder && !isValidStkFolder) ?
+                    "UBS account folder and UBS stock folder" : !isValidAccFolder ?
+                    "UBS account folder" : "UBS stock folder";
+
+                string invFileVerb = (!isValidAccFolder && !isValidStkFolder) ? "are" : "is";
+
                 MessageBox.Show(
-                    "UBS Account Folder Path is required.",
-                    "Missing Required File Path",
+                    $"Folder(s) from given path(s) {invFileVerb} not a correct \n{invFileErr}.",
+                    "Incorrect Backup Folder",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                return;
             }
-            else if (isPathChanging)
+
+            if (isPathChanging)
             {
+                Text = $"Migrate UBS Account ({db_name})";
+                lbl_ImportTitle.Text = "Select and Import Table";
+
+                string company_name = ExtractComName(txt_path_AccFolder.Text, "ACCOUNT");
+                string compare_name = txt_path_StkFolder.Text.Equals("") ?
+                    company_name : ExtractComName(txt_path_StkFolder.Text, "STOCK");
+
+                if (company_name == compare_name)
+                {
+                    Text = $"Migrate UBS Account ({company_name} \u25B6 {db_name})";
+                    lbl_ImportTitle.Text = $"Import backup data from: {company_name}";
+                }
+                else
+                {
+                    MessageBox.Show(
+                    $"Backup data of UBS Account and UBS Stock are likely different: \n\n" +
+                    $"UBS Account: \n{company_name}\n\n" +
+                    $"UBS Stock: \n{compare_name}\n\n" +
+                    $"Please review the file path and try again.",
+                    "Backup Data Mismatch",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+                    return;
+                }
+
                 List<string> list = new List<string>();
 
                 exception = null;
 
-                if (dgv_selModImport.RowCount > 0)
+                if (dgv_selTblImport.RowCount > 0)
                 {
                     dataSet1.Tables.Remove("Import_Tables");
+                    dataSet1.Tables.Remove("Stock_Tables");
                 }
-
-                Text = "Migrate UBS Account";
-                lbl_ImportTitle.Text = "Select and Import Table";
 
                 DGVTable_Load();
 
                 DataTable dataTable_show = dataSet1.Tables["Import_Tables"];
-                DataTable dataTable_back = dataSet2.Tables["Stock_Tables"];
+                DataTable dataTable_back = dataSet1.Tables["Stock_Tables"];
 
-                UBSData_Load(dataTable_show, txt_path_AccFolder, "gldata", "Chart of Account");
-                UBSData_Load(dataTable_show, txt_path_AccFolder, "icagent", "Sales Agent");
+                UBSData_Load(dataTable_show, txt_path_AccFolder, name_to_file["Chart of Account"], "Chart of Account");
+                UBSData_Load(dataTable_show, txt_path_AccFolder, name_to_file["Sales Agent"]     , "Sales Agent");
 
-                if (txt_path_StkFolder.Text != "") 
-                    UBSData_Load(dataTable_show, txt_path_StkFolder, "icagent", "Purchase Agent");
+                if (txt_path_StkFolder.Text != "")
+                    UBSData_Load(dataTable_show, txt_path_StkFolder, name_to_file["Purchase Agent"], "Purchase Agent");
 
-                UBSData_Load(dataTable_show, txt_path_AccFolder, "icarea", "Area");
-                UBSData_Load(dataTable_show, txt_path_AccFolder, "project", "Project");
-                UBSData_Load(dataTable_show, txt_path_AccFolder, "accmem", "Terms");
-                UBSData_Load(dataTable_show, txt_path_AccFolder, "currency", "Currency");
-                UBSData_Load(dataTable_show, txt_path_AccFolder, "arcust", "Customer");
-                UBSData_Load(dataTable_show, txt_path_AccFolder, "apvend", "Supplier");
+                UBSData_Load(dataTable_show, txt_path_AccFolder, name_to_file["Area"]   , "Area");
+                UBSData_Load(dataTable_show, txt_path_AccFolder, name_to_file["Project"], "Project");
+                //UBSData_Load(dataTable_show, txt_path_AccFolder, , "Terms");
+                UBSData_Load(dataTable_show, txt_path_AccFolder, name_to_file["Currency"], "Currency");
+                UBSData_Load(dataTable_show, txt_path_AccFolder, name_to_file["Customer"], "Customer");
+                UBSData_Load(dataTable_show, txt_path_AccFolder, name_to_file["Supplier"], "Supplier");
 
                 if (txt_path_StkFolder.Text != "")
                 {
-                    UBSData_Load(dataTable_show, txt_path_StkFolder, "icitem", "Item");
-                    UBSData_Load(dataTable_show, txt_path_StkFolder, "iccate", "Category");
-                    UBSData_Load(dataTable_show, txt_path_StkFolder, "icgroup", "Group");
-                    UBSData_Load(dataTable_show, txt_path_StkFolder, "iclocate", "Location");
+                    UBSData_Load(dataTable_back, txt_path_StkFolder, name_to_file["Category"], "Category");
+                    UBSData_Load(dataTable_back, txt_path_StkFolder, name_to_file["Group"]   , "Group");
+                    UBSData_Load(dataTable_back, txt_path_StkFolder, name_to_file["Location"], "Location");
+                    UBSData_Load(dataTable_back, txt_path_StkFolder, name_to_file["Item"]    , "Item");
                 }
 
                 if (exception != null)
@@ -199,7 +314,7 @@ namespace PlugIn_1.Forms
                     string printing_text = GenerateMessageList(exception);
 
                     MessageBox.Show(
-                        "The table cannot be listed because of the errors below:\n" +
+                        "The table cannot be listed because of the errors below:" +
                         printing_text,
                         "External error occur",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -207,15 +322,6 @@ namespace PlugIn_1.Forms
                 else
                 {
                     gb_dataMigrate.Enabled = txt_path_AccFolder.Equals("") ? false : true;
-
-                    try
-                    {
-                        string company_name = ExtractComName();
-
-                        Text = $"Migrate UBS Account ({company_name})";
-                        lbl_ImportTitle.Text = $"Import backup data from: {company_name}";
-                    }
-                    catch (IOException) { }
                 }
 
                 isPathChanging = false;
@@ -225,44 +331,20 @@ namespace PlugIn_1.Forms
         private void btn_import_Click(object sender, EventArgs e)
         {
             DataTable dataTable_show = dataSet1.Tables["Import_Tables"];
-            DataTable dataTable_back = dataSet2.Tables["Stock_Tables"];
+            DataTable dataTable_back = dataSet1.Tables["Stock_Tables"];
 
             rtxt_importStusLog.Text = "";
             lb_copied.Visible = false;
 
-            Dictionary<string, string[]> table_rows = new Dictionary<string, string[]>();
-            Dictionary<string, string> name_to_file = new Dictionary<string, string>()
-            {
-                {"Chart of Account" , "gldata"},
-                {"Sales Agent"      , "icagent"},
-                {"Purchase Agent"   , "icagent"},
-                {"Area"             , "icarea"},
-                {"Project"          , "project"},
-                {"Terms"            , ""},
-                {"Currency"         , "currency"},
-                {"Customer"         , "arcust"},
-                {"Supplier"         , "apvend"},
-                {"Item"             , "icitem"},
-                {"Category"         , "iccate"},
-                {"Group"            , "icgroup"},
-                {"Location"         , "iclocate"}
-            };
+            bool isMasterSelected = (bool)dataTable_show.Rows.Find("Chart of Account")["Select"];
 
-            string[] stk_table_name =
-            {
-                "Purchase Agent",
-                "Category",
-                "Group",
-                "Item",
-                "Location",
-                "icl3p"
-            };
+            Dictionary<string, string[]> import_table_rows = new Dictionary<string, string[]>();
 
             foreach (DataRow row in dataTable_show.Rows)
             {
                 if ((bool)row["Select"])
                 {
-                    table_rows.Add(
+                    import_table_rows.Add(
                         row["Table Name"].ToString(),                      // Table name --> KEY
                         new string[]
                         {
@@ -275,15 +357,15 @@ namespace PlugIn_1.Forms
                 }
             }
 
-            if (dataTable_back.Rows.Count > 0)
+            if (dataTable_back.Rows.Count > 0 && isMasterSelected)          // Only import stock files when select "Chart of Account"
             {
                 foreach (DataRow row in dataTable_back.Rows)
                 {
-                    table_rows.Add(
-                        row["Table Name"].ToString(),                      // Table name --> KEY
+                    import_table_rows.Add(
+                        row["Table Name"].ToString(),                       // Table name --> KEY
                         new string[]
                         {
-                            name_to_file[row["Table Name"].ToString()],    // File name
+                            name_to_file[row["Table Name"].ToString()],     // File name
                             row["Start From Record"].ToString(),
                             row["End To Record"].ToString(),
                             row["Total Records"].ToString()
@@ -292,19 +374,52 @@ namespace PlugIn_1.Forms
                 }
             }
 
-            if (table_rows.Count > 0)
+            if (import_table_rows.Count > 0)
             {
-                exception = null;
+                exception = successes = null;
 
-                foreach (KeyValuePair<string, string[]> table in table_rows)
+                if (chk_reformatAccNo.Checked)
+                    rtxt_importStusLog.AppendText(" \u24BE Account number reformatting has enabled.\n");
+
+                if (chk_overwriteExistData.Checked)
+                    rtxt_importStusLog.AppendText(" \u24BE Existing data overwrite has enabled.\n\n");
+
+                rtxt_importStusLog.AppendText(" \u25B6 UBS Data Migration Operation Start\n");
+
+                foreach (KeyValuePair<string, string[]> table in import_table_rows)
                 {
                     string dbf_file_path = stk_table_name.Contains(table.Key) ? // Take from stock folder if is stock table, else take from account folder.
                         txt_path_StkFolder.Text : txt_path_AccFolder.Text;
 
-                    UBSData_Import(dbf_file_path, table.Key, table.Value);
+                    if (!table.Value[3].Equals("0"))
+                    {
+                        UBSData_Import(dbf_file_path, table.Key, table.Value);
+                    }
+                    else
+                    {
+                        rtxt_importStusLog.AppendText($"\n \u26A0 No data found in {table.Key} table, operation skipped.");
+                        successes += $"\n- {table.Key}\n|No data found in {table.Key} table.\n>";
+                    }
                 }
 
-                if (exception != null)
+                int failure = exception == null ? 0 : exception.Split('>').Count() - 1,
+                    success = successes == null ? 0 : successes.Split('>').Count() - 1;
+
+                rtxt_importStusLog.AppendText($"\n\n\n \u24BE UBS Data Migration Operation Completed ({success} completed, {failure} failure)");
+                rtxt_importStusLog.ScrollToCaret();
+
+                if (exception == null)
+                {
+                    successes = GenerateMessageList(successes);
+                    
+                    MessageBox.Show(
+                        "All selected table has successfully imported.\n" +
+                        "Please review the migration information below:\n" +
+                        $"{successes}\n",
+                        "Data migration successful",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
                 {
                     exception = GenerateMessageList(exception);
 
@@ -314,15 +429,6 @@ namespace PlugIn_1.Forms
                         "Please review the status log for more information.",
                         $"Data migration contains error",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-                else
-                {
-                    MessageBox.Show(
-                        "All selected table has successfully imported.\n" +
-                        "Please check the data migration information below:\n" +
-                        $"{successes}\n",
-                        "Data migration successful",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             else
@@ -336,9 +442,12 @@ namespace PlugIn_1.Forms
 
         private void btn_copyImportStus_Click(object sender, EventArgs e)
         {
-            Clipboard.SetText(rtxt_importStusLog.Text);
+            if (rtxt_importStusLog.Text != "")
+            {
+                Clipboard.SetText(rtxt_importStusLog.Text);
 
-            lb_copied.Visible = true;
+                lb_copied.Visible = true;
+            }
         }
 
         private void btn_copyImportStus_Leave(object sender, EventArgs e)
@@ -355,7 +464,7 @@ namespace PlugIn_1.Forms
         {
             bool changeMade = (
                 (!txt_path_AccFolder.Text.Equals("") && !txt_path_StkFolder.Text.Equals("")) ||
-                dgv_selModImport.Rows.Count > 0
+                dgv_selTblImport.Rows.Count > 0
                 ) ? true : false;
 
             if (changeMade)
@@ -369,96 +478,50 @@ namespace PlugIn_1.Forms
             }
         }
 
-        //----------------------------------------------------------------------------------------------------//
+        //UBS Data Migration----------------------------------------------------------------------------------//
 
-        private void DGVTable_Load()
-        {
-            DataTable dataTable_display = new DataTable("Import_Tables");
-            DataTable dataTable_backing = new DataTable("Stock_Tables");
-
-            dataTable_display.Columns.Add("Select", typeof(bool));
-            dataTable_display.Columns.Add("Table Name", typeof(string));
-            dataTable_display.Columns.Add("Start From Record", typeof(object));
-            dataTable_display.Columns.Add("End To Record", typeof(object));
-            dataTable_display.Columns.Add("Total Records", typeof(int));
-
-            dataTable_backing.Columns.Add("Select", typeof(bool));
-            dataTable_backing.Columns.Add("Table Name", typeof(string));
-            dataTable_backing.Columns.Add("Start From Record", typeof(object));
-            dataTable_backing.Columns.Add("End To Record", typeof(object));
-            dataTable_backing.Columns.Add("Total Records", typeof(int));
-
-            DataColumn[] column = { dataTable_display.Columns[1] };
-            dataTable_display.PrimaryKey = column;
-
-            if (dataSet1.Tables["Import_Tables"] == null) dataSet1.Tables.Add(dataTable_display);
-            if (dataSet2.Tables["Stock_Tables"] == null) dataSet2.Tables.Add(dataTable_backing);
-
-            dgv_selModImport.DataSource = dataSet1.Tables["Import_Tables"];
-
-            dgv_selModImport.Columns[0].Width = 50;
-            dgv_selModImport.Columns[1].Width = 200;
-            dgv_selModImport.Columns[2].Width = 100;
-            dgv_selModImport.Columns[3].Width = 100;
-            dgv_selModImport.Columns[4].Width = 95;
-
-            dgv_selModImport.Columns[0].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            dgv_selModImport.Columns[1].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dgv_selModImport.Columns[2].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dgv_selModImport.Columns[3].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dgv_selModImport.Columns[4].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
-        }
-
-        private void UBSData_Load(DataTable target_table, TextBox textBox, string dbf_file_name, string table_name)
+        private void UBSData_Load(DataTable target_table, TextBox text_box, string dbf_file_name, string table_name)
         {
             DataTable dataTable = target_table;
 
-            string file_path = $"{textBox.Text}\\{dbf_file_name}.dbf";
+            string file_path = $"{text_box.Text}\\{dbf_file_name}.dbf";
             int total_rec = 0;
 
-            var options = new DbfDataReaderOptions
-            {
-                SkipDeletedRecords = true
-            };
+            var options = new DbfDataReaderOptions { SkipDeletedRecords = true };
 
             try
             {
                 using (var dbfDataReader = new DbfDataReader.DbfDataReader(file_path, options))
-                {
                     while (dbfDataReader.Read()) total_rec++;
-                }
 
                 if (dataTable.Rows.Find(table_name) == null)
-                {
                     dataTable.Rows.Add(false, table_name, "-", "-", total_rec);
-                }
             }
             catch (Exception ex)
             {
-                exception += $"{dbf_file_name} ({table_name})|{ex.Message}\n";
+                exception += $"\n\n{ex.Message}|\n- {dbf_file_name} ({table_name})>";
             }
         }
 
         private void UBSData_Import(string dbf_file_path, string table_name, string[] table_details)
         {
             string file_path = $"{dbf_file_path}\\{table_details[0]}.dbf";
+            string exc = null;
 
             int start_from_rec = table_details[1].Equals("-") ? 1 : int.Parse(table_details[1]);
             int end_to_rec = table_details[2].Equals("-") ? 0 : int.Parse(table_details[2]);
             int total_rec = int.Parse(table_details[3]);
 
-            end_to_rec = end_to_rec == 0 ? total_rec : end_to_rec;
+            if (end_to_rec == 0) end_to_rec = total_rec;
 
             int current_record = 0, success = 0, failure = 0;
 
-            var options = new DbfDataReaderOptions
-            {
-                SkipDeletedRecords = true
-            };
+            var options = new DbfDataReaderOptions { SkipDeletedRecords = true };
 
             using (var dbfDataReader = new DbfDataReader.DbfDataReader(file_path, options))
             {
-                rtxt_importStusLog.AppendText($" \u25B6 Start import {table_name} data from record number {start_from_rec} to {end_to_rec}.\n");
+                rtxt_importStusLog.AppendText($"\n\n----------\n" +
+                    $" \u25B6 Start import {table_name} data from record number {start_from_rec} to {end_to_rec}.\n");
 
                 while (dbfDataReader.Read())
                 {
@@ -498,6 +561,9 @@ namespace PlugIn_1.Forms
                                 case "Group":
                                     ProcessImport_ItemGroup(dbfDataReader, current_record);
                                     break;
+                                case "Location":
+                                    ProcessImport_ItemLocation(dbfDataReader, current_record);
+                                    break;
                                 case "Item":
                                     ProcessImport_Item(dbfDataReader, current_record);
                                     break;
@@ -509,18 +575,15 @@ namespace PlugIn_1.Forms
                         }
                         catch (Exception ex)
                         {
-                            exception += $"\nTable: {table_name}\n|- {ex.GetType().Name}\n>";
+                            exc = $"\nTable: {table_name}\n|- {ex.GetType().Name}\n>";
+                            exception += exc;
 
                             string exc_msg;
 
-                            try
-                            {
-                                exc_msg = $"{ex.InnerException.Message}: {ex.Message}";
-                            }
-                            catch (NullReferenceException)
-                            {
-                                exc_msg = ex.Message;
-                            }
+                            try 
+                            { exc_msg = $"{ex.InnerException.Message}: {ex.Message}"; }
+                            catch (NullReferenceException) 
+                            { exc_msg = ex.Message; }
 
                             rtxt_importStusLog.AppendText($"\n \u274C (Rec {current_record}) {exc_msg}");
                             failure++;
@@ -530,9 +593,11 @@ namespace PlugIn_1.Forms
                     rtxt_importStusLog.ScrollToCaret();
                 }
             }
-            successes += $"\n- {table_name} |(total {total_rec} records, {success} imported (No. {start_from_rec} to {end_to_rec})) \n>";
+            if (exc == null) 
+                successes += $"\n- {table_name} \n|(total {total_rec} records, {success} imported (No. {start_from_rec} to {end_to_rec})) \n>";
 
-            rtxt_importStusLog.AppendText($"\n\n \u24BE Data migration of {table_name} has been completed. ({success} success, {failure} failed)\n\n");
+            rtxt_importStusLog.AppendText($"\n\n \u24BE Data migration of {table_name} has been completed. ({success} success, {failure} failed)" +
+                $"\n----------");
             rtxt_importStusLog.ScrollToCaret();
         }
 
@@ -612,13 +677,15 @@ namespace PlugIn_1.Forms
             Debtor debtor = new Debtor(Program.session);
             DisplayTerms terms = new DisplayTerms(Program.session);
 
-            string acc_no = dbfDataReader.GetString(1);
+            string acc_no = chk_reformatAccNo.Checked ? 
+                ReformatAccNo(dbfDataReader.GetString(1)) : dbfDataReader.GetString(1);
+
             string acc_name = dbfDataReader.GetString(2);
             string display_term = dbfDataReader.GetString(25);
 
             string sts_word = DefStatus();
 
-            debtor.CreateOrUpdate_Debtor(chk_overwriteExistData.Checked, dbfDataReader);
+            debtor.CreateOrUpdate_Debtor(chk_overwriteExistData.Checked, acc_no, dbfDataReader);
 
             rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} debtor : {acc_no} - {acc_name}");
         }
@@ -628,47 +695,63 @@ namespace PlugIn_1.Forms
             Creditor creditor = new Creditor(Program.session);
             DisplayTerms terms = new DisplayTerms(Program.session);
 
-            string acc_no = dbfDataReader.GetString(1);
+            string acc_no = chk_reformatAccNo.Checked ?
+                ReformatAccNo(dbfDataReader.GetString(1)) : dbfDataReader.GetString(1);
+
             string acc_name = dbfDataReader.GetString(2);
 
             string sts_word = DefStatus();
 
-            creditor.CreateOrUpdate_Creditor(chk_overwriteExistData.Checked, dbfDataReader);
+            creditor.CreateOrUpdate_Creditor(chk_overwriteExistData.Checked, acc_no, dbfDataReader);
 
             rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} creditor : {acc_no} - {acc_name}");
         }
 
         private void ProcessImport_ItemGroup(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
         {
-            StockItem item = new StockItem(Program.session);
+            ItemGroups groups = new ItemGroups(Program.session);
 
-            string short_code = dbfDataReader.GetString(0);
+            string item_group = dbfDataReader.GetString(0);
             string desc = dbfDataReader.GetString(1);
 
             string sts_word = DefStatus();
 
-            item.CreateOrUpdate_ItemGroup(chk_overwriteExistData.Checked, dbfDataReader);
+            groups.CreateOrUpdate_ItemGroup(chk_overwriteExistData.Checked, item_group, desc);
 
-            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} item category : {short_code} ({desc})");
+            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} item category : {item_group} ({desc})");
         }
 
         private void ProcessImport_ItemCategory(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
         {
-            StockItem item = new StockItem(Program.session);
+            ItemCategories categories = new ItemCategories(Program.session);
 
             string short_code = dbfDataReader.GetString(0);
             string desc = dbfDataReader.GetString(1);
 
             string sts_word = DefStatus();
 
-            item.CreateOrUpdate_ItemCategory(chk_overwriteExistData.Checked, dbfDataReader);
+            categories.CreateOrUpdate_ItemCategory(chk_overwriteExistData.Checked, short_code, desc);
 
             rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} item category : {short_code} ({desc})");
         }
 
+        private void ProcessImport_ItemLocation(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
+        {
+            Locations locations = new Locations(Program.session);
+
+            string location = dbfDataReader.GetString(0);
+            string desc = dbfDataReader.GetString(1);
+
+            string sts_word = DefStatus();
+
+            locations.CreateOrUpdate_Location(chk_overwriteExistData.Checked, location, desc);
+
+            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} item location : {location} ({desc})");
+        }
+
         private void ProcessImport_Item(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
         {
-            StockItem item = new StockItem(Program.session);
+            Items item = new Items(Program.session);
 
             string sts_word = DefStatus();
 
@@ -677,12 +760,40 @@ namespace PlugIn_1.Forms
             rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} stock item : {dbfDataReader.GetString(1)}");
         }
 
-        private void ReformatAccNo(string acc_no)
-        {
-            if (chk_reformatAccNo.Checked)
-            {
+        //Utilities-------------------------------------------------------------------------------------------//
 
-            }
+        private void DGVTable_Load()
+        {
+            DataTable dataTable_display = new DataTable("Import_Tables");
+            DataTable dataTable_backing = new DataTable("Stock_Tables");
+
+            dataTable_display.Columns.Add("Select"              , typeof(bool));
+            dataTable_display.Columns.Add("Table Name"          , typeof(string));
+            dataTable_display.Columns.Add("Start From Record"   , typeof(object));
+            dataTable_display.Columns.Add("End To Record"       , typeof(object));
+            dataTable_display.Columns.Add("Total Records"       , typeof(int));
+
+            dataTable_backing.Columns.Add("Select"              , typeof(bool));
+            dataTable_backing.Columns.Add("Table Name"          , typeof(string));
+            dataTable_backing.Columns.Add("Start From Record"   , typeof(object));
+            dataTable_backing.Columns.Add("End To Record"       , typeof(object));
+            dataTable_backing.Columns.Add("Total Records"       , typeof(int));
+
+            dataTable_display.PrimaryKey = new DataColumn[] { dataTable_display.Columns[1] };
+            dataTable_backing.PrimaryKey = new DataColumn[] { dataTable_backing.Columns[1] };
+
+            if (dataSet1.Tables["Import_Tables"] == null) dataSet1.Tables.Add(dataTable_display);
+            if (dataSet1.Tables["Stock_Tables"] == null) dataSet1.Tables.Add(dataTable_backing);
+
+            dgv_selTblImport.DataSource = dataSet1.Tables["Import_Tables"];
+
+            dgv_selTblImport.Columns[0].Width = 50;
+            dgv_selTblImport.Columns[1].Width = 200;
+            dgv_selTblImport.Columns[2].Width = 100;
+            dgv_selTblImport.Columns[3].Width = 100;
+            dgv_selTblImport.Columns[4].Width = 95;
+
+            dgv_selTblImport.Columns[0].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
         }
 
         private void OpenFolderDialog(string desc, Control control)
@@ -708,63 +819,44 @@ namespace PlugIn_1.Forms
             }
         }
 
-        private string ExtractComName()
+        private bool ValidateFolders(string file_path, string file_name)
         {
-            var mmf = MemoryMappedFile.CreateFromFile($"{txt_path_AccFolder.Text}\\ACCOUNT.MEM");
+            FileInfo file = new FileInfo($"{file_path}\\{file_name}.MEM");
             
-            var accessor = mmf.CreateViewAccessor(offset: 0, size: 0);
-
-            byte[] stringBytes = new byte[5000];
-            accessor.ReadArray(0, stringBytes, 0, 5000);
-
-            string text = Encoding.ASCII.GetString(stringBytes).Replace("\0", "").Replace("\u0001", "");
-
-            while (!text.StartsWith("COMPANY")) text = text.Remove(0, 1);
-
-            char[] new_text = new char[85];
-            text.CopyTo(0, new_text, 0, 85);
-            text = "";
-
-            foreach (char c in new_text)
-            {
-                text += c;
-            }
-
-            return text.Trim().Remove(0, 10);
+            return file.Exists;
         }
 
         private void SetRecordRange(string column, NumericUpDown nud)
         {
-            if (dgv_selModImport.SelectedRows.Count > 0)
+            if (dgv_selTblImport.SelectedRows.Count > 0)
             {
-                foreach (DataGridViewRow row in dgv_selModImport.SelectedRows)
+                foreach (DataGridViewRow row in dgv_selTblImport.SelectedRows)
                 {
-                    if (nud.Value > 0)
-                    {
+                    if (0 < nud.Value && (int)nud.Value <= (int)row.Cells["Total Records"].Value) 
                         row.Cells[column].Value = nud.Value;
-                    }
-                    else
-                    {
+                    else if (nud.Value == 0)
                         row.Cells[column].Value = "-";
-                    }
                 }
             }
 
-            dgv_selModImport.Refresh();
+            dgv_selTblImport.Refresh();
         }
 
         private void CalibrateRecordRange()
         {
-            if (dgv_selModImport.SelectedRows.Count > 0)
+            if (dgv_selTblImport.SelectedRows.Count > 0)
             {
-                foreach (DataGridViewRow row in dgv_selModImport.SelectedRows)
+                foreach (DataGridViewRow row in dgv_selTblImport.SelectedRows)
                 {
                     if (nud_recRangeEnd.Value > 0 && row.Cells["Start From Record"].Value.Equals("-"))
                     {
-                        row.Cells["Start From Record"].Value = 1;
+                        if ((int)row.Cells["Total Records"].Value > 0)
+                        {
+                            row.Cells["Start From Record"].Value = 1;
 
-                        nud_recRangeStart.Maximum = 1;
-                        nud_recRangeStart.Value = 1;
+                            nud_recRangeStart.Maximum = 1;
+                            nud_recRangeStart.Value = 1;
+                        }
                     }
                     else if (nud_recRangeEnd.Value == 0)
                     {
@@ -777,14 +869,14 @@ namespace PlugIn_1.Forms
                 }
             }
 
-            dgv_selModImport.Refresh();
+            dgv_selTblImport.Refresh();
         }
 
         private void SyncRecordRange()
         {
             syncing_range = true;
             
-            foreach (DataGridViewRow row in dgv_selModImport.SelectedRows)
+            foreach (DataGridViewRow row in dgv_selTblImport.SelectedRows)
             {
                 var start = row.Cells["Start From Record"].Value.Equals("-") ?
                     0 : row.Cells["Start From Record"].Value;
@@ -805,46 +897,112 @@ namespace PlugIn_1.Forms
         }
 
         private void ResetRecordRange(DataGridViewRow row)
+    {
+        if (!row.Cells["Start From Record"].Value.Equals("-") || !row.Cells["End To Record"].Value.Equals("-"))
+            row.Cells["Start From Record"].Value = row.Cells["End To Record"].Value = "-";
+    }
+
+        private void SetCheckBoxSelection(DataGridViewCellEventArgs e)
         {
-            if (!row.Cells["Start From Record"].Value.Equals("-") || !row.Cells["End To Record"].Value.Equals("-"))
+            if (e.ColumnIndex != 0 || e.RowIndex < 0) return;
+
+            if (e.RowIndex == 0) // If table "Chart of Account" is selected
             {
-                row.Cells["Start From Record"].Value = row.Cells["End To Record"].Value = "-";
+                // Set selection of other tables to "Chart of Account"
+                for (int i = 1; i < dgv_selTblImport.Rows.Count; i++)
+                {
+                    dgv_selTblImport[0, i].Value = false;
+                }
+
+                return;
+            }
+
+            // Else set selection of "Chart of Account"
+            for (int i = 1; i < dgv_selTblImport.Rows.Count; i++)
+            {
+                if ((bool)dgv_selTblImport[0, i].Value)
+                {
+                    dgv_selTblImport[0, 0].Value = false;
+                    break;
+                }
             }
         }
 
         private string GenerateMessageList(string msg_strean)
         {
-            List<string[]> exc_list = new List<string[]>();
+            List<string[]> msg_list = new List<string[]>();
             
-            string[] exc = msg_strean.Split('>');
+            string[] msg_row_arr = msg_strean.Split('>');
             string printing_text = "";
             string previous_table = "";
-            string previous_ex = "";
+            string previous_msg = "";
 
-            foreach (string exc_list_arr in exc)
+            foreach (string msg_row in msg_row_arr) { msg_list.Add(msg_row.Split('|')); }
+
+            msg_list.Sort((prev, crnt) => prev[0].CompareTo(crnt[0]));
+
+            foreach (string[] msg_list_row in msg_list)
             {
-                exc_list.Add(exc_list_arr.Split('|'));
-            }
-
-            exc_list.Sort((prev, cur) => prev[0].CompareTo(cur[0]));
-
-            foreach (string[] exc_list_item in exc_list)
-            {
-                if (previous_table != exc_list_item[0])
+                if (previous_table != msg_list_row[0])
                 {
-                    previous_ex = "";
-                    previous_table = exc_list_item[0];
-                    printing_text += exc_list_item[0].Equals("") ? "" : $"\n{exc_list_item[0]}";
+                    previous_table = msg_list_row[0];
+                    printing_text += msg_list_row[0].Equals("") ? "" : msg_list_row[0];
                 }
 
-                if (exc_list_item.Length > 1 && !exc_list_item[1].Equals(previous_ex))
+                if (msg_list_row.Length > 1 && !msg_list_row[1].Equals(previous_msg))
                 {
-                    previous_ex = exc_list_item[1];
-                    printing_text += exc_list_item[0].Equals("") ? "" : $"{exc_list_item[1]}";
+                    previous_msg = msg_list_row[1];
+                    printing_text += msg_list_row[0].Equals("") ? "" : msg_list_row[1];
                 }
             }
 
             return printing_text;
+        }
+
+        private string ExtractComName(string file_path, string file_name)
+        {
+            var mmf = MemoryMappedFile.CreateFromFile($"{file_path}\\{file_name}.MEM");
+            
+            var accessor = mmf.CreateViewAccessor(0, 0);
+
+            byte[] stringBytes = new byte[5000];
+            accessor.ReadArray(0, stringBytes, 0, 5000);
+
+            string text = Encoding.ASCII.GetString(stringBytes).Replace("\0", "").Replace("\u0001", "");
+
+            while (!text.StartsWith("COMPANY")) { text = text.Remove(0, 1); }
+
+            char[] new_text = new char[85];
+            text.CopyTo(0, new_text, 0, 85);
+            text = "";
+
+            foreach (char c in new_text) { text += c; }
+
+            mmf.Dispose();
+            accessor.Dispose();
+
+            return text.Trim().Remove(0, 10);
+        }
+
+        private string ReformatAccNo(string acc_no)
+        {
+            string[] parts = acc_no.Split('/'); // ["3000", "A01"]
+
+            if (parts.Length != 2) return acc_no; // fallback
+
+            string mainPart = parts[0]; // "3000"
+            string subPart = parts[1];  // "A01"
+
+            // Format mainPart to 3 digits
+            if (mainPart.Length > 3) mainPart = mainPart.Substring(0, 3);
+
+            // Format subPart: letters + numbers with leading zeros
+            string alpha = new string(subPart.Where(c => char.IsLetter(c)).ToArray()); // "A"
+            string digit = new string(subPart.Where(c => char.IsDigit(c)).ToArray());  // "01"
+
+            string subFormatted = alpha + digit.PadLeft(3, '0'); // "A001"
+
+            return $"{mainPart}-{subFormatted}"; // "300-A001"
         }
 
         private string DefStatus()

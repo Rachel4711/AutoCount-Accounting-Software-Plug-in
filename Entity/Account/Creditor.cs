@@ -23,16 +23,16 @@ namespace PlugIn_1.Entity.Account
             session = userSession;
         }
 
-        public void CreateOrUpdate_Creditor(bool isOverwrite, DbfDataReader.DbfDataReader dbfDataReader)
+        public void CreateOrUpdate_Creditor(bool isOverwrite, string acc_no, DbfDataReader.DbfDataReader dbfDataReader)
         {
             CreditorDataAccess cmd = CreditorDataAccess.Create(session, session.DBSetting);
 
             CreditorEntity creditor = isOverwrite ?
-                cmd.GetCreditor(dbfDataReader.GetString(1)) : cmd.NewCreditor();
+                cmd.GetCreditor(acc_no) : cmd.NewCreditor();
 
             creditor.ControlAccount = getDefaultCtrlAcc();
 
-            creditor.AccNo           = dbfDataReader.GetString(1);
+            creditor.AccNo           = acc_no;
             creditor.CompanyName     = dbfDataReader.GetString(2);
             creditor.Address1        = dbfDataReader.GetString(4);
             creditor.Address2        = dbfDataReader.GetString(5);

@@ -1,5 +1,6 @@
 ﻿using AutoCount.Authentication;
 using PlugIn_1.Entity;
+using PlugIn_1.Forms.Testing;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -74,28 +75,10 @@ namespace PlugIn_1.Forms
             form.Show();
         }
 
-        private void btn_debtor_Click(object sender, EventArgs e)
+        private void button1_Click(object sender, EventArgs e)
         {
-            DebtorForm form = new DebtorForm();
-            form.Show();
-        }
-
-        private void btn_stockItem_Click(object sender, EventArgs e)
-        {
-            StockItemForm form = new StockItemForm();
-            form.Show();
-        }
-
-        private void btn_salesOrder_Click(object sender, EventArgs e)
-        {
-            SalesOrderForm form = new SalesOrderForm();
-            form.Show();
-        }
-
-        private void btn_purchaseInvoice_Click(object sender, EventArgs e)
-        {
-            PurchaseInvoiceForm form = new PurchaseInvoiceForm();
-            form.Show();
+            Form1 form1 = new Form1();
+            form1.Show();
         }
     }
 }

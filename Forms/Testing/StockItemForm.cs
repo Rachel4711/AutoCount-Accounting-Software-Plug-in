@@ -24,7 +24,7 @@ namespace PlugIn_1.Forms
 
         private void button_Create_Click(object sender, EventArgs e)
         {
-            StockItem stockItem = new StockItem(Program.session);
+            Items stockItem = new Items(Program.session);
 
             string item_code = textBox_ItemCode.Text;
             string description = textBox_ItemDesc.Text;
@@ -47,7 +47,7 @@ namespace PlugIn_1.Forms
 
         private void button_CreateLoc_Click(object sender, EventArgs e)
         {
-            StockItem stockItem = new StockItem(Program.session);
+            Items stockItem = new Items(Program.session);
 
             try
             {

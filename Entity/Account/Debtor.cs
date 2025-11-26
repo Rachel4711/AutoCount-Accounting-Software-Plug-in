@@ -21,16 +21,16 @@ namespace PlugIn_1.Entity
             session = userSession;
         }
 
-        internal void CreateOrUpdate_Debtor(bool isOverwrite, DbfDataReader.DbfDataReader dbfDataReader)
+        internal void CreateOrUpdate_Debtor(bool isOverwrite, string acc_no, DbfDataReader.DbfDataReader dbfDataReader)
         {
             DebtorDataAccess access = DebtorDataAccess.Create(session, session.DBSetting);
 
             DebtorEntity debtor = isOverwrite ? 
-                access.GetDebtor(dbfDataReader.GetString(1)) : access.NewDebtor();
+                access.GetDebtor(acc_no) : access.NewDebtor();
 
             debtor.ControlAccount    = getDefaultCtrlAcc();
 
-            debtor.AccNo             = dbfDataReader.GetString(1);
+            debtor.AccNo             = acc_no;
             debtor.CompanyName       = dbfDataReader.GetString(2);
             debtor.Address1          = dbfDataReader.GetString(4);
             debtor.Address2          = dbfDataReader.GetString(5);
