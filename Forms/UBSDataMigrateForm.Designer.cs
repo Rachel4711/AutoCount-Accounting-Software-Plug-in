@@ -38,7 +38,7 @@
             this.txt_path_StkFolder = new System.Windows.Forms.TextBox();
             this.label4 = new System.Windows.Forms.Label();
             this.btn_browseAccFolder = new System.Windows.Forms.Button();
-            this.btn_help = new System.Windows.Forms.Button();
+            this.btn_folderHelp = new System.Windows.Forms.Button();
             this.btn_listTable = new System.Windows.Forms.Button();
             this.lbl_ImportTitle = new System.Windows.Forms.Label();
             this.label7 = new System.Windows.Forms.Label();
@@ -60,10 +60,10 @@
             this.chk_overwriteExistData = new System.Windows.Forms.CheckBox();
             this.chk_reformatAccNo = new System.Windows.Forms.CheckBox();
             this.lb_copied = new System.Windows.Forms.Label();
+            this.btn_rangeHelp = new System.Windows.Forms.Button();
             this.gb_recRangeSet = new System.Windows.Forms.GroupBox();
             this.btn_resetAllRange = new System.Windows.Forms.Button();
             this.btn_resetRange = new System.Windows.Forms.Button();
-            this.btn_rangeHelp = new System.Windows.Forms.Button();
             this.label6 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.nud_recRangeStart)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataSet1)).BeginInit();
@@ -157,20 +157,20 @@
             this.btn_browseAccFolder.UseVisualStyleBackColor = true;
             this.btn_browseAccFolder.Click += new System.EventHandler(this.btn_browseAccFolder_Click);
             // 
-            // btn_help
+            // btn_folderHelp
             // 
-            this.btn_help.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.btn_help.FlatAppearance.BorderColor = System.Drawing.Color.White;
-            this.btn_help.FlatAppearance.BorderSize = 5;
-            this.btn_help.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
-            this.btn_help.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
-            this.btn_help.Location = new System.Drawing.Point(291, 58);
-            this.btn_help.Name = "btn_help";
-            this.btn_help.Size = new System.Drawing.Size(23, 25);
-            this.btn_help.TabIndex = 34;
-            this.btn_help.Text = "?";
-            this.btn_help.UseVisualStyleBackColor = false;
-            this.btn_help.Click += new System.EventHandler(this.btn_help_Click);
+            this.btn_folderHelp.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.btn_folderHelp.FlatAppearance.BorderColor = System.Drawing.Color.White;
+            this.btn_folderHelp.FlatAppearance.BorderSize = 5;
+            this.btn_folderHelp.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
+            this.btn_folderHelp.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.btn_folderHelp.Location = new System.Drawing.Point(291, 58);
+            this.btn_folderHelp.Name = "btn_folderHelp";
+            this.btn_folderHelp.Size = new System.Drawing.Size(23, 25);
+            this.btn_folderHelp.TabIndex = 34;
+            this.btn_folderHelp.Text = "?";
+            this.btn_folderHelp.UseVisualStyleBackColor = false;
+            this.btn_folderHelp.Click += new System.EventHandler(this.btn_folderHelp_Click);
             // 
             // btn_listTable
             // 
@@ -377,10 +377,10 @@
             this.label9.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label9.Location = new System.Drawing.Point(31, 232);
             this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(520, 16);
+            this.label9.Size = new System.Drawing.Size(500, 16);
             this.label9.TabIndex = 64;
-            this.label9.Text = "Reformat customer and supplier account number to the format of AutoCount Accounti" +
-    "ng.";
+            this.label9.Text = "Apply account number formatting of AutoCount Accounting to customer and supplier." +
+    "";
             // 
             // label2
             // 
@@ -426,6 +426,21 @@
             this.lb_copied.Visible = false;
             this.lb_copied.Click += new System.EventHandler(this.btn_copyImportStus_Leave);
             // 
+            // btn_rangeHelp
+            // 
+            this.btn_rangeHelp.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.btn_rangeHelp.FlatAppearance.BorderColor = System.Drawing.Color.White;
+            this.btn_rangeHelp.FlatAppearance.BorderSize = 5;
+            this.btn_rangeHelp.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
+            this.btn_rangeHelp.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
+            this.btn_rangeHelp.Location = new System.Drawing.Point(126, 99);
+            this.btn_rangeHelp.Name = "btn_rangeHelp";
+            this.btn_rangeHelp.Size = new System.Drawing.Size(37, 21);
+            this.btn_rangeHelp.TabIndex = 58;
+            this.btn_rangeHelp.Text = "Help";
+            this.btn_rangeHelp.UseVisualStyleBackColor = false;
+            this.btn_rangeHelp.Click += new System.EventHandler(this.btn_rangeHelp_Click);
+            // 
             // gb_recRangeSet
             // 
             this.gb_recRangeSet.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
@@ -435,6 +450,7 @@
             this.gb_recRangeSet.Controls.Add(this.btn_resetRange);
             this.gb_recRangeSet.Controls.Add(this.nud_recRangeStart);
             this.gb_recRangeSet.Controls.Add(this.label6);
+            this.gb_recRangeSet.Enabled = false;
             this.gb_recRangeSet.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.gb_recRangeSet.Location = new System.Drawing.Point(6, 120);
             this.gb_recRangeSet.Name = "gb_recRangeSet";
@@ -464,21 +480,6 @@
             this.btn_resetRange.UseVisualStyleBackColor = true;
             this.btn_resetRange.Click += new System.EventHandler(this.btn_resetRange_Click);
             // 
-            // btn_rangeHelp
-            // 
-            this.btn_rangeHelp.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.btn_rangeHelp.FlatAppearance.BorderColor = System.Drawing.Color.White;
-            this.btn_rangeHelp.FlatAppearance.BorderSize = 5;
-            this.btn_rangeHelp.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
-            this.btn_rangeHelp.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
-            this.btn_rangeHelp.Location = new System.Drawing.Point(126, 99);
-            this.btn_rangeHelp.Name = "btn_rangeHelp";
-            this.btn_rangeHelp.Size = new System.Drawing.Size(37, 21);
-            this.btn_rangeHelp.TabIndex = 58;
-            this.btn_rangeHelp.Text = "Help";
-            this.btn_rangeHelp.UseVisualStyleBackColor = false;
-            this.btn_rangeHelp.Click += new System.EventHandler(this.btn_rangeHelp_Click);
-            // 
             // label6
             // 
             this.label6.AutoSize = true;
@@ -496,7 +497,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 735);
             this.Controls.Add(this.button_exit);
-            this.Controls.Add(this.btn_help);
+            this.Controls.Add(this.btn_folderHelp);
             this.Controls.Add(this.btn_browseAccFolder);
             this.Controls.Add(this.btn_listTable);
             this.Controls.Add(this.label4);
@@ -534,7 +535,7 @@
         private System.Windows.Forms.TextBox txt_path_StkFolder;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Button btn_browseAccFolder;
-        private System.Windows.Forms.Button btn_help;
+        private System.Windows.Forms.Button btn_folderHelp;
         private System.Windows.Forms.Button btn_listTable;
         private System.Windows.Forms.Label lbl_ImportTitle;
         private System.Windows.Forms.Label label7;

@@ -1,18 +1,14 @@
 ﻿using AutoCount.ARAP.Creditor;
+using AutoCount.ARAP.Debtor;
 using AutoCount.Authentication;
 using AutoCount.Data;
-using AutoCount.Data.EntityFramework;
 using AutoCount.GL;
 using AutoCount.RegistryID;
 using PlugIn_1.Entity.General_Maintainance;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.ConstrainedExecution;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace PlugIn_1.Entity.Account
+namespace PlugIn_1.Entity
 {
     public class Creditor
     {
@@ -25,10 +21,10 @@ namespace PlugIn_1.Entity.Account
 
         public void CreateOrUpdate_Creditor(bool isOverwrite, string acc_no, DbfDataReader.DbfDataReader dbfDataReader)
         {
-            CreditorDataAccess cmd = CreditorDataAccess.Create(session, session.DBSetting);
+            CreditorDataAccess access = CreditorDataAccess.Create(session, session.DBSetting);
 
-            CreditorEntity creditor = isOverwrite ?
-                cmd.GetCreditor(acc_no) : cmd.NewCreditor();
+            CreditorEntity creditor = isOverwrite && hasCreditor(acc_no) ? 
+                access.GetCreditor(acc_no) : access.NewCreditor();
 
             creditor.ControlAccount = getDefaultCtrlAcc();
 
@@ -56,7 +52,7 @@ namespace PlugIn_1.Entity.Account
                 throw new Exception($"\"{creditor.ControlAccount}\" is not a control account. Please try with another value.");
             }
 
-            cmd.SaveCreditor(creditor, session.LoginUserID);
+            access.SaveCreditor(creditor, session.LoginUserID);
         }
 
         private bool isCreditorCtrlAcc(string creditorCtrlAcc)
@@ -106,6 +102,19 @@ namespace PlugIn_1.Entity.Account
 
             return currencies.hasCurrency(currency_code) ?
                 currency_code : DBRegistry.Create(dbSetting).GetString(new LocalCurrencyCode());
+        }
+
+        public bool hasCreditor(string acc_no)
+        {
+            try
+            {
+                CreditorDataAccess.Create(session, session.DBSetting).GetCreditor(acc_no);
+                return true;
+            }
+            catch (DebtorRecordNotFoundException)
+            {
+                return false;
+            }
         }
     }
 }

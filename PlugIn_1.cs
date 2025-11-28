@@ -112,24 +112,6 @@ namespace PlugIn_1
             return databases;
         }
 
-        public List<string> getStringFromDBF(string file_path, int col_index)
-        {
-            var options = new DbfDataReaderOptions
-            {
-                SkipDeletedRecords = true
-            };
 
-            List<string> records = new List<string>();
-            
-            using (var dbfDataReader = new DbfDataReader.DbfDataReader(file_path, options))
-            {
-                while (dbfDataReader.Read())
-                {
-                    records.Add(dbfDataReader.GetString(col_index));
-                }
-            }
-
-            return records;
-        }
     }
 }

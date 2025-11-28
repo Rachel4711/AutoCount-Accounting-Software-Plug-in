@@ -25,7 +25,7 @@ namespace PlugIn_1.Entity
         {
             DebtorDataAccess access = DebtorDataAccess.Create(session, session.DBSetting);
 
-            DebtorEntity debtor = isOverwrite ? 
+            DebtorEntity debtor = isOverwrite && hasDebtor(acc_no) ? 
                 access.GetDebtor(acc_no) : access.NewDebtor();
 
             debtor.ControlAccount    = getDefaultCtrlAcc();
@@ -108,6 +108,19 @@ namespace PlugIn_1.Entity
 
             return currencies.hasCurrency(currency_code) ?
                 currency_code : DBRegistry.Create(dbSetting).GetString(new LocalCurrencyCode());
+        }
+
+        public bool hasDebtor(string acc_no)
+        {
+            try
+            {
+                DebtorDataAccess.Create(session, session.DBSetting).GetDebtor(acc_no);
+                return true;
+            }
+            catch (DebtorRecordNotFoundException)
+            {
+                return false;
+            }
         }
     }
 }

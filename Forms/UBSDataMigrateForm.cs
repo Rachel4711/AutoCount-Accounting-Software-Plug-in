@@ -1,4 +1,4 @@
-﻿using AutoCount.BackupService;
+﻿using AutoCount.Data.EntityFramework;
 using DbfDataReader;
 using PlugIn_1.Entity;
 using PlugIn_1.Entity.General_Maintainance;
@@ -10,10 +10,12 @@ using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Windows.Forms;
-using Creditor = PlugIn_1.Entity.Account.Creditor;
-using Debtor = PlugIn_1.Entity.Debtor;
+
+using Creditor   = PlugIn_1.Entity.Creditor;
+using Debtor     = PlugIn_1.Entity.Debtor;
+using ItemGroups = PlugIn_1.Entity.Stock.ItemGroups;
+using Locations  = PlugIn_1.Entity.Stock.Locations;
 
 namespace PlugIn_1.Forms
 {
@@ -25,10 +27,11 @@ namespace PlugIn_1.Forms
 
         private string db_name = Program.session.DBSetting.DBName.ToString();
 
-        private bool syncing_range = false;
+        private bool isSyncingRange = false;
 
         private bool isPathChanging = false;
 
+        // Dictionary to relate the table name to the correspond file name
         private Dictionary<string, string> name_to_file = new Dictionary<string, string>()
         {
             {"Chart of Account" , "gldata"},
@@ -36,7 +39,6 @@ namespace PlugIn_1.Forms
             {"Purchase Agent"   , "icagent"},
             {"Area"             , "icarea"},
             {"Project"          , "project"},
-            //{"Terms"            , ""},
             {"Currency"         , "currency"},
             {"Customer"         , "arcust"},
             {"Supplier"         , "apvend"},
@@ -46,6 +48,7 @@ namespace PlugIn_1.Forms
             {"Location"         , "iclocate"}
         };
 
+        // Array to declare table name classified within stock
         private string[] stk_table_name =
         {
             "Purchase Agent",
@@ -60,20 +63,20 @@ namespace PlugIn_1.Forms
         {
             InitializeComponent();
 
-            btn_import.Cursor = Cursors.Hand;
+            btn_import.Cursor = Cursors.Hand;           // Indicate that "IMPORT" button is important
 
-            Text = $"Migrate UBS Account ({db_name})";
+            Text = $"Migrate UBS Account ({db_name})";  // Show the DB name
         }
 
         //Controls--------------------------------------------------------------------------------------------//
 
-        private void btn_help_Click(object sender, EventArgs e)
+        private void btn_folderHelp_Click(object sender, EventArgs e)
         {
             MessageBox.Show(
                 "Guides to select backup folders:\n\n" +
-                "1. Use 7zip software to extract .ACC file to a new folder, and .STK file to another new folder.\n" +
+                "1. Use 7zip or any other file compresser software to extract .ACC file to a new folder, and .STK file to another new folder.\n" +
                 "2. Choose the extracted folders for the corresponding folder path entry.",
-                "Data Import Help Guide", 
+                "Data Import Help Guide",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -83,10 +86,10 @@ namespace PlugIn_1.Forms
                 "Guides to set record importing range:\n\n" +
                 "1. Click on the checkbox on the left to select a table to import.\n" +
                 "2. Select the entire row by click on most left side of the row.\n" +
-                "3. Set both value to 0 to import all records in the table.\n" +
+                "3. Leave both value to 0 to import all records in the table.\n" +
                 "4. Set both value to the same number to import single record.\n" +
-                "5. The value of start < end < total records in table.\n\n" +
-                "Tips: Setting record range for multiple tables is supported.",
+                "5. The valid value: start <= end <= total records in table.\n\n" +
+                "Tips: Setting record range for multiple tables is allowed.",
                 "Import Range Setting Help Guide", 
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
@@ -103,52 +106,58 @@ namespace PlugIn_1.Forms
 
         private void txt_path_AccFolder_TextChanged(object sender, EventArgs e)
         {
+            // Enable or stock folder selection only if UBS account folder path is given
             btn_browseStkFolder.Enabled =
-                txt_path_StkFolder.Enabled =
-                btn_listTable.Enabled =
-                txt_path_AccFolder.Text.Equals("") ? false : true;
+            txt_path_StkFolder.Enabled =
+            btn_listTable.Enabled = txt_path_AccFolder.Text.Equals("") ? false : true;
 
-            isPathChanging = true;
+            isPathChanging = txt_path_AccFolder.Text.Equals("") ? false : true; // Indicate path changes if not left empty
         }
 
         private void txt_path_StkFolder_TextChanged(object sender, EventArgs e)
         {
-            isPathChanging = true;
+            isPathChanging = true; // Indicate path changes
         }
 
         private void nud_recRangeStart_Click(object sender, EventArgs e)
         {
-            nud_recRangeStart.Maximum = nud_recRangeEnd.Value;
+            nud_recRangeStart.Maximum = nud_recRangeEnd.Value; // Record start <= Record End
         }
 
         private void nud_recRangeEnd_Click(object sender, EventArgs e)
         {
-            nud_recRangeStart.Maximum = nud_recRangeEnd.Value;
+            nud_recRangeStart.Maximum = nud_recRangeEnd.Value; // Record start <= Record End
         }
 
         private void nud_recRangeStart_ValueChanged(object sender, EventArgs e)
         {
-            if (!syncing_range) SetRecordRange("Start From Record", nud_recRangeStart);
+            // Set the data record range through controls only if not syncing range to the control
+            if (!isSyncingRange) SetRecordRange("Start From Record", nud_recRangeStart);
         }
 
         private void nud_recRangeEnd_ValueChanged(object sender, EventArgs e)
         {
-            if (!syncing_range && dgv_selTblImport.SelectedRows.Count > 0)
+            /* Set the data record range through controls only if not syncing range to the control
+               and has at least 1 row selected in the data grid view                               */
+            if (!isSyncingRange && dgv_selTblImport.SelectedRows.Count > 0)
             {
                 SetRecordRange("End To Record", nud_recRangeEnd);
-                CalibrateRecordRange();
+                CalibrateRecordRange(); // Calibrate the value of Record start
 
+                // Make sure Record start is always <= Record End
                 if (nud_recRangeStart.Value > nud_recRangeEnd.Value)
                     nud_recRangeStart.Value = nud_recRangeEnd.Value;
             }
             else
             {
+                // Make sure the min value of Record start set correctly when select through records
                 nud_recRangeStart.Minimum = nud_recRangeEnd.Value > 0 ? 1 : 0;
             }
         }
 
         private void dgv_selTblImport_Click(object sender, EventArgs e)
         {
+            // Enable record range setting when at least 1 row selected and checkbox of master row is checked
             gb_recRangeSet.Enabled = 
                 dgv_selTblImport.SelectedRows.Count > 0 && !(bool)dgv_selTblImport[0, 0].Value ? 
                 true : false;
@@ -156,7 +165,6 @@ namespace PlugIn_1.Forms
 
         private void dgv_selTblImport_RowHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
         {
-            gb_recRangeSet.Enabled = (bool)dgv_selTblImport[0, 0].Value ? false : true;
             SyncRecordRange();
         }
 
@@ -167,116 +175,133 @@ namespace PlugIn_1.Forms
 
         private void dgv_selTblImport_CurrentCellDirtyStateChanged(object sender, EventArgs e)
         {
+            // Make sure data grid view reacts immediately with checkbox selection changes
             if (dgv_selTblImport.IsCurrentCellDirty)
                 dgv_selTblImport.CommitEdit(DataGridViewDataErrorContexts.Commit);
         }
 
         private void dgv_selTblImport_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
+            // Only apply checkbox selection rule when the first row is the master row
             if (dgv_selTblImport[1, 0].Value.Equals("Chart of Account"))
                 SetCheckBoxSelection(e);
 
+            // Enable record range setting when at least 1 row selected and checkbox of master row is checked
             gb_recRangeSet.Enabled =
                 dgv_selTblImport.SelectedRows.Count > 0 && !(bool)dgv_selTblImport[0, 0].Value ?
                 true : false;
 
+            // If checkbox of master row is checked
             if ((bool)dgv_selTblImport[0, 0].Value)
             {
-                syncing_range = true;
+                isSyncingRange = true;  // Indicate record range sync
 
+                // Reset data record range of other rows in data grid view
                 foreach (DataGridViewRow row in dgv_selTblImport.Rows)
                 {
                     ResetRecordRange(row);
                 }
 
-                nud_recRangeStart.Value = nud_recRangeEnd.Value = 0;
+                nud_recRangeStart.Value = nud_recRangeEnd.Value = 0; // Reset value of range setting controls
 
-                syncing_range = false;
+                isSyncingRange = false; // Close record range sync indication
             }
         }
 
         private void btn_resetRange_Click(object sender, EventArgs e)
         {
-            syncing_range = true;
-            
+            isSyncingRange = true;  // Indicate record range sync
+
+            // Reset data record range of each selected row(s) in data grid view
             foreach (DataGridViewRow row in dgv_selTblImport.SelectedRows)
             {
                 ResetRecordRange(row);
             }
 
-            syncing_range = false;
+            isSyncingRange = false; // Close record range sync indication
 
-            nud_recRangeStart.Value = nud_recRangeEnd.Value = 0;
+            nud_recRangeStart.Value = nud_recRangeEnd.Value = 0; // Reset value of range setting controls
         }
 
         private void btn_resetAllRange_Click(object sender, EventArgs e)
         {
-            syncing_range = true;
-            
+            isSyncingRange = true;  // Indicate record range sync
+
+            // Reset data record range of all rows in data grid view
             foreach (DataGridViewRow row in dgv_selTblImport.Rows)
             {
                 ResetRecordRange(row);
             }
 
-            syncing_range = false;
+            nud_recRangeStart.Value = nud_recRangeEnd.Value = 0; // Reset value of range setting controls
 
-            nud_recRangeStart.Value = nud_recRangeEnd.Value = 0;
+            isSyncingRange = false; // Close record range sync indication
         }
 
         private void btn_listTable_Click(object sender, EventArgs e)
         {
+            // Check if is the correct folder(s), dismiss the stock text field unless stock folder path has given
             bool isValidAccFolder = ValidateFolders(txt_path_AccFolder.Text, "ACCOUNT");
             bool isValidStkFolder = txt_path_StkFolder.Text.Equals("") ?
                 true : (ValidateFolders(txt_path_StkFolder.Text, "STOCK") && 
                 !ValidateFolders(txt_path_StkFolder.Text, "ACCOUNT"));
 
+            // Reject if is not the correct folder(s) and show error message
             if (!isValidAccFolder || !isValidStkFolder)
             {
+                // Show message based on which folder(s) is incorrect
                 string invFileErr = (!isValidAccFolder && !isValidStkFolder) ?
                     "UBS account folder and UBS stock folder" : !isValidAccFolder ?
                     "UBS account folder" : "UBS stock folder";
 
-                string invFileVerb = (!isValidAccFolder && !isValidStkFolder) ? "are" : "is";
+                string invFileNoun = (!isValidAccFolder && !isValidStkFolder) ? "are" : "is";
 
                 MessageBox.Show(
-                    $"Folder(s) from given path(s) {invFileVerb} not a correct \n{invFileErr}.",
+                    $"Folder(s) from given path(s) {invFileNoun} not a correct \n{invFileErr}.",
                     "Incorrect Backup Folder",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                 return;
             }
 
+            // If the folder path(s) has changed
             if (isPathChanging)
             {
+                // Reset the titles
                 Text = $"Migrate UBS Account ({db_name})";
                 lbl_ImportTitle.Text = "Select and Import Table";
 
+                gb_recRangeSet.Enabled = false; // Reset disabled record range setting
+
+                // Extract company name from the memory file in the folder(s) from given path(s)
                 string company_name = ExtractComName(txt_path_AccFolder.Text, "ACCOUNT");
                 string compare_name = txt_path_StkFolder.Text.Equals("") ?
                     company_name : ExtractComName(txt_path_StkFolder.Text, "STOCK");
 
+                // If folders from the same company
                 if (company_name == compare_name)
                 {
+                    // Update the title text to show the name of the company
                     Text = $"Migrate UBS Account ({company_name} \u25B6 {db_name})";
                     lbl_ImportTitle.Text = $"Import backup data from: {company_name}";
                 }
                 else
                 {
-                    MessageBox.Show(
+                    // Prompt user to decide either to mess up the backup data folders or not
+                    DialogResult result = MessageBox.Show(
                     $"Backup data of UBS Account and UBS Stock are likely different: \n\n" +
                     $"UBS Account: \n{company_name}\n\n" +
                     $"UBS Stock: \n{compare_name}\n\n" +
-                    $"Please review the file path and try again.",
+                    $"Continue with the selected folders?",
                     "Backup Data Mismatch",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
-                    return;
+                    if (result.ToString().Equals("No")) return;
                 }
 
-                List<string> list = new List<string>();
+                exception = null; // Reset exception message text
 
-                exception = null;
-
+                // Refresh the tables shown in data grid view by removing the existing tables
                 if (dgv_selTblImport.RowCount > 0)
                 {
                     dataSet1.Tables.Remove("Import_Tables");
@@ -285,8 +310,11 @@ namespace PlugIn_1.Forms
 
                 DGVTable_Load();
 
+                // Retrieve display table and background table from dataSet1
                 DataTable dataTable_show = dataSet1.Tables["Import_Tables"];
                 DataTable dataTable_back = dataSet1.Tables["Stock_Tables"];
+
+                // Load the data tables in a specified order //
 
                 UBSData_Load(dataTable_show, txt_path_AccFolder, name_to_file["Chart of Account"], "Chart of Account");
                 UBSData_Load(dataTable_show, txt_path_AccFolder, name_to_file["Sales Agent"]     , "Sales Agent");
@@ -296,11 +324,11 @@ namespace PlugIn_1.Forms
 
                 UBSData_Load(dataTable_show, txt_path_AccFolder, name_to_file["Area"]   , "Area");
                 UBSData_Load(dataTable_show, txt_path_AccFolder, name_to_file["Project"], "Project");
-                //UBSData_Load(dataTable_show, txt_path_AccFolder, , "Terms");
                 UBSData_Load(dataTable_show, txt_path_AccFolder, name_to_file["Currency"], "Currency");
                 UBSData_Load(dataTable_show, txt_path_AccFolder, name_to_file["Customer"], "Customer");
                 UBSData_Load(dataTable_show, txt_path_AccFolder, name_to_file["Supplier"], "Supplier");
 
+                // Load the stock data table to background table if the stock folder path has given
                 if (txt_path_StkFolder.Text != "")
                 {
                     UBSData_Load(dataTable_back, txt_path_StkFolder, name_to_file["Category"], "Category");
@@ -309,9 +337,10 @@ namespace PlugIn_1.Forms
                     UBSData_Load(dataTable_back, txt_path_StkFolder, name_to_file["Item"]    , "Item");
                 }
 
+                // Generate exception message list if any exception has thrown
                 if (exception != null)
                 {
-                    string printing_text = GenerateMessageList(exception);
+                    string printing_text = ConvertMessageToList(exception, true);
 
                     MessageBox.Show(
                         "The table cannot be listed because of the errors below:" +
@@ -321,34 +350,39 @@ namespace PlugIn_1.Forms
                 }
                 else
                 {
+                    // Enable the data migration settings if no exception thrown
                     gb_dataMigrate.Enabled = txt_path_AccFolder.Equals("") ? false : true;
                 }
 
-                isPathChanging = false;
+                isPathChanging = false; // Reset folder path change indication
             }
         }
 
         private void btn_import_Click(object sender, EventArgs e)
         {
+            // Retrieve display table and background table
             DataTable dataTable_show = dataSet1.Tables["Import_Tables"];
             DataTable dataTable_back = dataSet1.Tables["Stock_Tables"];
 
-            rtxt_importStusLog.Text = "";
-            lb_copied.Visible = false;
+            rtxt_importStusLog.Text = "";   // Reset import status log
+            lb_copied.Visible = false;      // Reset copy success message to hidden
 
+            // Indicate master row checkbox selection
             bool isMasterSelected = (bool)dataTable_show.Rows.Find("Chart of Account")["Select"];
 
+            // Dictionary to store data tables to import
             Dictionary<string, string[]> import_table_rows = new Dictionary<string, string[]>();
 
             foreach (DataRow row in dataTable_show.Rows)
             {
-                if ((bool)row["Select"])
+                // Add to import_table_rows dictionary if is selected rows or has master row selected
+                if ((bool)row["Select"] || isMasterSelected)
                 {
                     import_table_rows.Add(
-                        row["Table Name"].ToString(),                      // Table name --> KEY
+                        row["Table Name"].ToString(),                      // Table name as the KEY
                         new string[]
                         {
-                            name_to_file[row["Table Name"].ToString()],    // File name
+                            name_to_file[row["Table Name"].ToString()],    // File name and record number details
                             row["Start From Record"].ToString(),
                             row["End To Record"].ToString(),
                             row["Total Records"].ToString()
@@ -357,15 +391,16 @@ namespace PlugIn_1.Forms
                 }
             }
 
-            if (dataTable_back.Rows.Count > 0 && isMasterSelected)          // Only import stock files when select "Chart of Account"
+            // Add to import_table_rows dictionary if has master row selected
+            if (dataTable_back.Rows.Count > 0 && isMasterSelected)
             {
                 foreach (DataRow row in dataTable_back.Rows)
                 {
                     import_table_rows.Add(
-                        row["Table Name"].ToString(),                       // Table name --> KEY
+                        row["Table Name"].ToString(),                       // Table name as the KEY
                         new string[]
                         {
-                            name_to_file[row["Table Name"].ToString()],     // File name
+                            name_to_file[row["Table Name"].ToString()],     // File name and record number details
                             row["Start From Record"].ToString(),
                             row["End To Record"].ToString(),
                             row["Total Records"].ToString()
@@ -374,43 +409,78 @@ namespace PlugIn_1.Forms
                 }
             }
 
+
+            // if at least 1 data table has selected
             if (import_table_rows.Count > 0)
             {
-                exception = successes = null;
-
-                if (chk_reformatAccNo.Checked)
-                    rtxt_importStusLog.AppendText(" \u24BE Account number reformatting has enabled.\n");
-
-                if (chk_overwriteExistData.Checked)
-                    rtxt_importStusLog.AppendText(" \u24BE Existing data overwrite has enabled.\n\n");
-
-                rtxt_importStusLog.AppendText(" \u25B6 UBS Data Migration Operation Start\n");
+                string import_list = "";
 
                 foreach (KeyValuePair<string, string[]> table in import_table_rows)
                 {
-                    string dbf_file_path = stk_table_name.Contains(table.Key) ? // Take from stock folder if is stock table, else take from account folder.
+                    import_list += 
+                        $"\n- {table.Key}\n|" +
+                        $"Total: {table.Value[3]} (No.{table.Value[1]} to no.{table.Value[2]})\n>";
+                }
+
+                import_list = ConvertMessageToList(import_list, false);
+
+                DialogResult result = MessageBox.Show(
+                    $"Please check the information below before proceed:\n\n" +
+                    $"Table to import:\n" +
+                    $"{import_list}\n",
+                    "Confirm Data Migration Action",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+
+                if (result.ToString().Equals("No")) return;
+                
+                exception = successes = null; // Reset exception and success message text
+
+                // Show messages based on the chosen options //
+
+                if (chk_reformatAccNo.Checked)
+                    rtxt_importStusLog.AppendText("\n \u24BE Account number reformat has enabled.\n");
+
+                string nl = rtxt_importStusLog.Text.Equals("") ? "\n" : ""; // Move 1 line downward if as the 1st line
+                if (chk_overwriteExistData.Checked)
+                    rtxt_importStusLog.AppendText($"{nl} \u24BE Existing data overwrite has enabled.\n");
+
+                rtxt_importStusLog.AppendText($"\n \u25B6 UBS Data Migration Operation Start\n");
+
+                // Perform data migration for all selected data tables
+                foreach (KeyValuePair<string, string[]> table in import_table_rows)
+                {
+                    // Take from stock folder if is stock table, else take from account folder.
+                    string dbf_file_path = stk_table_name.Contains(table.Key) ? 
                         txt_path_StkFolder.Text : txt_path_AccFolder.Text;
 
+                    // If the data table has any records
                     if (!table.Value[3].Equals("0"))
                     {
-                        UBSData_Import(dbf_file_path, table.Key, table.Value);
+                        UBSData_Import(dbf_file_path, table.Key, table.Value); // Perform data migration
                     }
                     else
                     {
+                        // Show the message to indicate empty table in the status log and append to exception message text
                         rtxt_importStusLog.AppendText($"\n \u26A0 No data found in {table.Key} table, operation skipped.");
-                        successes += $"\n- {table.Key}\n|No data found in {table.Key} table.\n>";
+                        exception += 
+                            $"\n" +
+                            $"{table.Key}\n|" +
+                            $"- Empty {table.Key} table.\n>";
                     }
                 }
 
-                int failure = exception == null ? 0 : exception.Split('>').Count() - 1,
-                    success = successes == null ? 0 : successes.Split('>').Count() - 1;
+                // Count success and failure based on how many table issue the message,
+                // -1 to remove extra empty element
+                int success = successes == null ? 0 : successes.Split('>').Count() - 1,
+                    failure = exception == null ? 0 : exception.Split('>').Distinct().Count() - 1; // Dismiss repeative message
 
-                rtxt_importStusLog.AppendText($"\n\n\n \u24BE UBS Data Migration Operation Completed ({success} completed, {failure} failure)");
+                rtxt_importStusLog.AppendText($"\n\n \u24BE UBS Data Migration Operation Completed ({success} completed, {failure} failure)\n");
                 rtxt_importStusLog.ScrollToCaret();
 
+                // If no exception thrown during the migration process
                 if (exception == null)
                 {
-                    successes = GenerateMessageList(successes);
+                    successes = ConvertMessageToList(successes, true); // Convert the success message to list form
                     
                     MessageBox.Show(
                         "All selected table has successfully imported.\n" +
@@ -421,7 +491,7 @@ namespace PlugIn_1.Forms
                 }
                 else
                 {
-                    exception = GenerateMessageList(exception);
+                    exception = ConvertMessageToList(exception, true); // Convert the exception message to list form
 
                     MessageBox.Show(
                         "Exceptions has occur when migrating the table below:\n" +
@@ -431,7 +501,7 @@ namespace PlugIn_1.Forms
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
-            else
+            else // If no data table has selected
             {
                 MessageBox.Show(
                     "Please select at least 1 table to import.",
@@ -442,17 +512,18 @@ namespace PlugIn_1.Forms
 
         private void btn_copyImportStus_Click(object sender, EventArgs e)
         {
+            // Copy the import status log if is not empty
             if (rtxt_importStusLog.Text != "")
             {
                 Clipboard.SetText(rtxt_importStusLog.Text);
 
-                lb_copied.Visible = true;
+                lb_copied.Visible = true; // Show the copy success message
             }
         }
 
         private void btn_copyImportStus_Leave(object sender, EventArgs e)
         {
-            lb_copied.Visible = false;
+            lb_copied.Visible = false; // Reset copy success message to hidden
         }
 
         private void button_exit_Click(object sender, EventArgs e)
@@ -462,11 +533,10 @@ namespace PlugIn_1.Forms
 
         private void UBSDataMigrateForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            bool changeMade = (
-                (!txt_path_AccFolder.Text.Equals("") && !txt_path_StkFolder.Text.Equals("")) ||
-                dgv_selTblImport.Rows.Count > 0
-                ) ? true : false;
+            // Indicate changes if folder path changed or has data table loaded
+            bool changeMade = (isPathChanging || dgv_selTblImport.Rows.Count > 0) ? true : false;
 
+            // Prompt the user to left the selected folder path or loaded table discarded before leave
             if (changeMade)
             {
                 DialogResult result = MessageBox.Show(
@@ -482,7 +552,7 @@ namespace PlugIn_1.Forms
 
         private void UBSData_Load(DataTable target_table, TextBox text_box, string dbf_file_name, string table_name)
         {
-            DataTable dataTable = target_table;
+            DataTable dataTable = target_table; // Determine to load the data table in either display table or background table
 
             string file_path = $"{text_box.Text}\\{dbf_file_name}.dbf";
             int total_rec = 0;
@@ -491,45 +561,63 @@ namespace PlugIn_1.Forms
 
             try
             {
+                // Count the total number of records in the given data file
                 using (var dbfDataReader = new DbfDataReader.DbfDataReader(file_path, options))
                     while (dbfDataReader.Read()) total_rec++;
 
+                // Add new data table row to target_table if is not in target_table
                 if (dataTable.Rows.Find(table_name) == null)
                     dataTable.Rows.Add(false, table_name, "-", "-", total_rec);
+                // dataTable.Rows.Add(checkbox select, table name, record start, record end, total record);
             }
             catch (Exception ex)
             {
-                exception += $"\n\n{ex.Message}|\n- {dbf_file_name} ({table_name})>";
+                exception += 
+                    $"\n" +
+                    $"{ex.Message}|\n" +
+                    $"- {dbf_file_name} ({table_name})\n>";
             }
         }
 
         private void UBSData_Import(string dbf_file_path, string table_name, string[] table_details)
         {
             string file_path = $"{dbf_file_path}\\{table_details[0]}.dbf";
-            string exc = null;
+            string exc = null; // Declare local exception message text, and reset the text once every data table import
 
-            int start_from_rec = table_details[1].Equals("-") ? 1 : int.Parse(table_details[1]);
-            int end_to_rec = table_details[2].Equals("-") ? 0 : int.Parse(table_details[2]);
+            /*
+             table_details[0] = table name
+             table_details[1] = record start
+             table_details[2] = record end
+             table_details[3] = total record
+             */
+
+            int start_from_rec = table_details[1].Equals("-") ? 1 : int.Parse(table_details[1]);    // if the value = '-' then set to 1
+            int end_to_rec = table_details[2].Equals("-") ? 0 : int.Parse(table_details[2]);        // if the value = '-' then set to 0
             int total_rec = int.Parse(table_details[3]);
 
-            if (end_to_rec == 0) end_to_rec = total_rec;
+            if (end_to_rec == 0) end_to_rec = total_rec;         // Set record end = total record if the value is 0
 
-            int current_record = 0, success = 0, failure = 0;
+            int current_record = 0, success = 0, failure = 0;    // Reset record counts to 0
 
             var options = new DbfDataReaderOptions { SkipDeletedRecords = true };
 
             using (var dbfDataReader = new DbfDataReader.DbfDataReader(file_path, options))
             {
-                rtxt_importStusLog.AppendText($"\n\n----------\n" +
+                rtxt_importStusLog.AppendText(
+                    $"\n" +
+                    $"\n" +
                     $" \u25B6 Start import {table_name} data from record number {start_from_rec} to {end_to_rec}.\n");
 
+                // Iterate through every row in the data file
                 while (dbfDataReader.Read())
                 {
                     current_record++;
 
+                    // If current_record count is in range of start_from_rec and end_to_rec
                     if ((start_from_rec <= current_record && current_record <= end_to_rec))
                     {
-                        txt_currentRecNo.Text = current_record.ToString();
+                        txt_currentRecNo.Text = current_record.ToString(); // Show the current processing record count
+
                         try
                         {
                             switch (table_name)
@@ -568,16 +656,25 @@ namespace PlugIn_1.Forms
                                     ProcessImport_Item(dbfDataReader, current_record);
                                     break;
                                 default:
-                                    exception += $"{table_details[0]}({table_name}) does not belong to the backup data table.\n";
+                                    // If is other table
+                                    exception += 
+                                        $"\n" +
+                                        $"Table: {table_name}\n|" +
+                                        $"- {table_details[0]} is not a backup data table.\n";
                                     break;
                             }
                             success++;
                         }
                         catch (Exception ex)
                         {
-                            exc = $"\nTable: {table_name}\n|- {ex.GetType().Name}\n>";
-                            exception += exc;
+                            // Set the local exception text
+                            exc = $"\n" +
+                                $"Table: {table_name}\n|" +
+                                $"- {ex.GetType().Name}\n>";
 
+                            exception += exc; // Append local exception text to global exception text
+
+                            // Set exception message based on either has inner exception message or not
                             string exc_msg;
 
                             try 
@@ -590,15 +687,24 @@ namespace PlugIn_1.Forms
                         }
                     }
 
-                    rtxt_importStusLog.ScrollToCaret();
+                    rtxt_importStusLog.ScrollToCaret(); // Scroll to the bottom of the status log text box
                 }
             }
-            if (exc == null) 
-                successes += $"\n- {table_name} \n|(total {total_rec} records, {success} imported (No. {start_from_rec} to {end_to_rec})) \n>";
+            // If no exception thrown while import the data table
+            if (exc == null)
+            {
+                successes += 
+                    $"\n- {table_name} \n|" +
+                    $"(total {total_rec} records, {success} successful (No. {start_from_rec} to {end_to_rec})) \n>";
+            }
 
-            rtxt_importStusLog.AppendText($"\n\n \u24BE Data migration of {table_name} has been completed. ({success} success, {failure} failed)" +
-                $"\n----------");
-            rtxt_importStusLog.ScrollToCaret();
+            rtxt_importStusLog.AppendText(
+                $"\n" +
+                $"\n" +
+                $" \u24BE Data migration of {table_name} has been completed. ({success} success, {failure} failed)\n" +
+                $"----------");
+
+            rtxt_importStusLog.ScrollToCaret(); // Scroll to the bottom of the status log text box
         }
 
         private void ProcessImport_SalesAgent(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
@@ -675,15 +781,22 @@ namespace PlugIn_1.Forms
         private void ProcessImport_Debtor(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
         {
             Debtor debtor = new Debtor(Program.session);
-            DisplayTerms terms = new DisplayTerms(Program.session);
 
-            string acc_no = chk_reformatAccNo.Checked ? 
-                ReformatAccNo(dbfDataReader.GetString(1)) : dbfDataReader.GetString(1);
+            string src_acc_no = dbfDataReader.GetString(1);
+            string fmt_acc_no = ReformatAccNo(src_acc_no);
+
+            // Make sure no duplicate debtor even with different account number format 
+            string acc_no;
+
+            if (chk_reformatAccNo.Checked)
+                // Use formatted account number when no source account number found in existing data
+                acc_no = !debtor.hasDebtor(src_acc_no) ? fmt_acc_no : src_acc_no;
+            else
+                // Use source account number when no formatted account number found in existing data
+                acc_no = !debtor.hasDebtor(fmt_acc_no) ? src_acc_no : fmt_acc_no;
 
             string acc_name = dbfDataReader.GetString(2);
-            string display_term = dbfDataReader.GetString(25);
-
-            string sts_word = DefStatus();
+            string sts_word = DefStatus(debtor.hasDebtor(acc_no));
 
             debtor.CreateOrUpdate_Debtor(chk_overwriteExistData.Checked, acc_no, dbfDataReader);
 
@@ -693,14 +806,22 @@ namespace PlugIn_1.Forms
         private void ProcessImport_Creditor(DbfDataReader.DbfDataReader dbfDataReader, int rec_no)
         {
             Creditor creditor = new Creditor(Program.session);
-            DisplayTerms terms = new DisplayTerms(Program.session);
 
-            string acc_no = chk_reformatAccNo.Checked ?
-                ReformatAccNo(dbfDataReader.GetString(1)) : dbfDataReader.GetString(1);
+            string src_acc_no = dbfDataReader.GetString(1);
+            string fmt_acc_no = ReformatAccNo(src_acc_no);
+
+            // Make sure no duplicate creditor even with different account number format
+            string acc_no;
+
+            if (chk_reformatAccNo.Checked)
+                // Use formatted account number when no source account number found in existing data
+                acc_no = !creditor.hasCreditor(src_acc_no) ? fmt_acc_no : src_acc_no;
+            else
+                // Use source account number when no formatted account number found in existing data
+                acc_no = !creditor.hasCreditor(fmt_acc_no) ? src_acc_no : fmt_acc_no;
 
             string acc_name = dbfDataReader.GetString(2);
-
-            string sts_word = DefStatus();
+            string sts_word = DefStatus(creditor.hasCreditor(acc_no));
 
             creditor.CreateOrUpdate_Creditor(chk_overwriteExistData.Checked, acc_no, dbfDataReader);
 
@@ -764,16 +885,17 @@ namespace PlugIn_1.Forms
 
         private void DGVTable_Load()
         {
+            // Declare display table and background table
             DataTable dataTable_display = new DataTable("Import_Tables");
             DataTable dataTable_backing = new DataTable("Stock_Tables");
 
-            dataTable_display.Columns.Add("Select"              , typeof(bool));
+            dataTable_display.Columns.Add("Select"              , typeof(bool));    // Checkbox selection
             dataTable_display.Columns.Add("Table Name"          , typeof(string));
             dataTable_display.Columns.Add("Start From Record"   , typeof(object));
-            dataTable_display.Columns.Add("End To Record"       , typeof(object));
+            dataTable_display.Columns.Add("End To Record"       , typeof(object)); 
             dataTable_display.Columns.Add("Total Records"       , typeof(int));
 
-            dataTable_backing.Columns.Add("Select"              , typeof(bool));
+            dataTable_backing.Columns.Add("Select"              , typeof(bool));    // Checkbox selection
             dataTable_backing.Columns.Add("Table Name"          , typeof(string));
             dataTable_backing.Columns.Add("Start From Record"   , typeof(object));
             dataTable_backing.Columns.Add("End To Record"       , typeof(object));
@@ -782,16 +904,17 @@ namespace PlugIn_1.Forms
             dataTable_display.PrimaryKey = new DataColumn[] { dataTable_display.Columns[1] };
             dataTable_backing.PrimaryKey = new DataColumn[] { dataTable_backing.Columns[1] };
 
-            if (dataSet1.Tables["Import_Tables"] == null) dataSet1.Tables.Add(dataTable_display);
-            if (dataSet1.Tables["Stock_Tables"] == null) dataSet1.Tables.Add(dataTable_backing);
+            // Add tables to dataSet1
+            dataSet1.Tables.Add(dataTable_display);
+            dataSet1.Tables.Add(dataTable_backing);
 
-            dgv_selTblImport.DataSource = dataSet1.Tables["Import_Tables"];
+            dgv_selTblImport.DataSource = dataSet1.Tables["Import_Tables"]; // Binding the data grid view with "Import_Tables" in dataSet1
 
             dgv_selTblImport.Columns[0].Width = 50;
             dgv_selTblImport.Columns[1].Width = 200;
             dgv_selTblImport.Columns[2].Width = 100;
             dgv_selTblImport.Columns[3].Width = 100;
-            dgv_selTblImport.Columns[4].Width = 95;
+            dgv_selTblImport.Columns[4].Width = 83;
 
             dgv_selTblImport.Columns[0].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
         }
@@ -802,11 +925,12 @@ namespace PlugIn_1.Forms
             {
                 ofd.Description = desc;
 
+                // If folder has selected in the dialog
                 if (ofd.ShowDialog() == DialogResult.OK)
                 {
                     try
                     {
-                        control.Text = ofd.SelectedPath;
+                        control.Text = ofd.SelectedPath; // Set the text of given text field to the selected folder path
                     }
                     catch (Exception ex)
                     {
@@ -821,21 +945,20 @@ namespace PlugIn_1.Forms
 
         private bool ValidateFolders(string file_path, string file_name)
         {
-            FileInfo file = new FileInfo($"{file_path}\\{file_name}.MEM");
-            
-            return file.Exists;
+            return new FileInfo($"{file_path}\\{file_name}.MEM").Exists; // Check if file exist
         }
 
         private void SetRecordRange(string column, NumericUpDown nud)
         {
+            // If at least 1 row selected
             if (dgv_selTblImport.SelectedRows.Count > 0)
             {
                 foreach (DataGridViewRow row in dgv_selTblImport.SelectedRows)
                 {
-                    if (0 < nud.Value && (int)nud.Value <= (int)row.Cells["Total Records"].Value) 
-                        row.Cells[column].Value = nud.Value;
+                    if (0 < nud.Value && (int)nud.Value <= (int)row.Cells["Total Records"].Value)
+                        row.Cells[column].Value = nud.Value; // If nud control value > 0 and <= total records: column value = nud control value   
                     else if (nud.Value == 0)
-                        row.Cells[column].Value = "-";
+                        row.Cells[column].Value = "-";       // If nud control value = 0: column value = '-'
                 }
             }
 
@@ -844,28 +967,33 @@ namespace PlugIn_1.Forms
 
         private void CalibrateRecordRange()
         {
+            // If at least 1 row selected
             if (dgv_selTblImport.SelectedRows.Count > 0)
             {
                 foreach (DataGridViewRow row in dgv_selTblImport.SelectedRows)
                 {
+                    // If value of nud_recRangeEnd control > 0 and "Start From Record" value of the row = '-'
                     if (nud_recRangeEnd.Value > 0 && row.Cells["Start From Record"].Value.Equals("-"))
                     {
+                        // If the row shows that the data table has any records
                         if ((int)row.Cells["Total Records"].Value > 0)
                         {
+                            // Set the values to 1 so that the range start with no.1 instead of no.0 //
+                            
                             row.Cells["Start From Record"].Value = 1;
-
-                            nud_recRangeStart.Maximum = 1;
+                            
+                            nud_recRangeStart.Minimum = 1;
                             nud_recRangeStart.Value = 1;
                         }
                     }
                     else if (nud_recRangeEnd.Value == 0)
                     {
+                        // Reset the values if value of nud_recRangeEnd control > 0 //
+
                         row.Cells["Start From Record"].Value = "-";
 
-                        nud_recRangeStart.Maximum = 0;
+                        nud_recRangeStart.Minimum = 0;
                     }
-
-                    nud_recRangeStart.Minimum = nud_recRangeEnd.Value > 0 ? 1 : 0;
                 }
             }
 
@@ -874,85 +1002,99 @@ namespace PlugIn_1.Forms
 
         private void SyncRecordRange()
         {
-            syncing_range = true;
+            isSyncingRange = true; // Indicate record range sync
             
             foreach (DataGridViewRow row in dgv_selTblImport.SelectedRows)
             {
-                var start = row.Cells["Start From Record"].Value.Equals("-") ?
+                var start = row.Cells["Start From Record"].Value.Equals("-") ?  // start = 0 if column value is a '-' else = column value
                     0 : row.Cells["Start From Record"].Value;
 
-                var end = row.Cells["End To Record"].Value.Equals("-") ?
+                var end = row.Cells["End To Record"].Value.Equals("-") ?        // end = 0 if column value is a '-' else = column value
                     0 : row.Cells["End To Record"].Value;
 
-                var total = row.Cells["Total Records"].Value.Equals(0) ?
+                var total = row.Cells["Total Records"].Value.Equals(0) ?        // total = 0 if column value = 0 else = column value
                     0 : row.Cells["Total Records"].Value;
 
+                // Make sure Record start and Record end <= total records
                 nud_recRangeStart.Maximum = nud_recRangeEnd.Maximum = decimal.Parse(total.ToString());
                 
+                // Set the current value of controls
                 nud_recRangeEnd.Value = decimal.Parse(end.ToString());
                 nud_recRangeStart.Value = decimal.Parse(start.ToString());
             }
 
-            syncing_range = false;
+            isSyncingRange = false; // Close record range sync indication
         }
 
         private void ResetRecordRange(DataGridViewRow row)
-    {
-        if (!row.Cells["Start From Record"].Value.Equals("-") || !row.Cells["End To Record"].Value.Equals("-"))
-            row.Cells["Start From Record"].Value = row.Cells["End To Record"].Value = "-";
-    }
+        {
+            // Reset both value of "Start From Record" and "End To Record" column = '-' only if column value != '-'
+            if (!row.Cells["Start From Record"].Value.Equals("-") || !row.Cells["End To Record"].Value.Equals("-"))
+                row.Cells["Start From Record"].Value = row.Cells["End To Record"].Value = "-";
+        }
 
         private void SetCheckBoxSelection(DataGridViewCellEventArgs e)
         {
-            if (e.ColumnIndex != 0 || e.RowIndex < 0) return;
+            if (e.ColumnIndex != 0 || e.RowIndex < 0) return; // If is not clicking on the checkbox column
 
-            if (e.RowIndex == 0) // If table "Chart of Account" is selected
+            // If the master row is selected
+            if (e.RowIndex == 0)
             {
-                // Set selection of other tables to "Chart of Account"
-                for (int i = 1; i < dgv_selTblImport.Rows.Count; i++)
+                for (int i = 1; i < dgv_selTblImport.Rows.Count; i++)   // Iterate from 2nd row
                 {
-                    dgv_selTblImport[0, i].Value = false;
+                    dgv_selTblImport[0, i].Value = false;               // Deselect the other rows
                 }
 
                 return;
             }
 
-            // Else set selection of "Chart of Account"
-            for (int i = 1; i < dgv_selTblImport.Rows.Count; i++)
+            for (int i = 1; i < dgv_selTblImport.Rows.Count; i++)       // Iterate from 2nd row
             {
                 if ((bool)dgv_selTblImport[0, i].Value)
                 {
-                    dgv_selTblImport[0, 0].Value = false;
+                    dgv_selTblImport[0, 0].Value = false;               // Deselect the master row if any other row is selected
                     break;
                 }
             }
         }
 
-        private string GenerateMessageList(string msg_strean)
+        private string ConvertMessageToList(string msg_strean, bool printDistinct)
         {
             List<string[]> msg_list = new List<string[]>();
             
-            string[] msg_row_arr = msg_strean.Split('>');
+            string[] msg_row_arr = msg_strean.Split('>'); // Split the stream of exception text into ["table 1|msg 1", "table 2|msg 2"]
             string printing_text = "";
             string previous_table = "";
             string previous_msg = "";
 
-            foreach (string msg_row in msg_row_arr) { msg_list.Add(msg_row.Split('|')); }
+            // Split chunks into ["table 1", "msg 1"], ["table 2", "msg 2"] and add them into the list
+            foreach (string msg_chunk in msg_row_arr) { msg_list.Add(msg_chunk.Split('|')); }
 
-            msg_list.Sort((prev, crnt) => prev[0].CompareTo(crnt[0]));
+            msg_list.Sort((prev, crnt) => prev[0].CompareTo(crnt[0])); // Sort the list in ascending order
 
             foreach (string[] msg_list_row in msg_list)
             {
-                if (previous_table != msg_list_row[0])
+                // If to print distinct message
+                if (printDistinct)
                 {
-                    previous_table = msg_list_row[0];
-                    printing_text += msg_list_row[0].Equals("") ? "" : msg_list_row[0];
-                }
+                    // If meets different table name
+                    if (previous_table != msg_list_row[0])
+                    {
+                        previous_table = msg_list_row[0];                                   // Set to new table name
+                        printing_text += msg_list_row[0].Equals("") ? "" : msg_list_row[0]; // Append the new table name if is not empty
+                    }
 
-                if (msg_list_row.Length > 1 && !msg_list_row[1].Equals(previous_msg))
+                    // If meets different message
+                    if (msg_list_row.Length > 1 && !msg_list_row[1].Equals(previous_msg))
+                    {
+                        previous_msg = msg_list_row[1];                                     // Set to new message
+                        printing_text += msg_list_row[0].Equals("") ? "" : msg_list_row[1]; // Append the new message if the table name is not empty
+                    }
+                }
+                else
                 {
-                    previous_msg = msg_list_row[1];
-                    printing_text += msg_list_row[0].Equals("") ? "" : msg_list_row[1];
+                    printing_text += msg_list_row[0].Equals("") ? "" : msg_list_row[0]; // Append the new table name if is not empty
+                    printing_text += msg_list_row[0].Equals("") ? "" : msg_list_row[1]; // Append the new message if the table name is not empty
                 }
             }
 
@@ -961,34 +1103,36 @@ namespace PlugIn_1.Forms
 
         private string ExtractComName(string file_path, string file_name)
         {
+            // Construct access to file in given path
             var mmf = MemoryMappedFile.CreateFromFile($"{file_path}\\{file_name}.MEM");
-            
-            var accessor = mmf.CreateViewAccessor(0, 0);
+            var accessor = mmf.CreateViewAccessor();
 
             byte[] stringBytes = new byte[5000];
-            accessor.ReadArray(0, stringBytes, 0, 5000);
+            accessor.ReadArray(0, stringBytes, 0, 5000); // Read the first 5000 bytes from given memory file
 
+            // Convert the bytes to string and remove miscellaneous characters
             string text = Encoding.ASCII.GetString(stringBytes).Replace("\0", "").Replace("\u0001", "");
 
-            while (!text.StartsWith("COMPANY")) { text = text.Remove(0, 1); }
+            while (!text.StartsWith("COMPANY")) { text = text.Remove(0, 1); } // Remove all characters in front of "COMPANY"
 
             char[] new_text = new char[85];
-            text.CopyTo(0, new_text, 0, 85);
+            text.CopyTo(0, new_text, 0, 85); // Dismiss the characters after 85 characters
             text = "";
 
-            foreach (char c in new_text) { text += c; }
+            foreach (char c in new_text) { text += c; } // Restore the text
 
+            // Close the file
             mmf.Dispose();
             accessor.Dispose();
 
-            return text.Trim().Remove(0, 10);
+            return text.Trim().Remove(0, 10); // Remove the "COMPANY" identifier in front of the company name
         }
 
         private string ReformatAccNo(string acc_no)
         {
-            string[] parts = acc_no.Split('/'); // ["3000", "A01"]
+            string[] parts = acc_no.Split('/'); // Split account number to ["3000", "A01"]
 
-            if (parts.Length != 2) return acc_no; // fallback
+            if (parts.Length != 2) return acc_no; // fallback if is ambigous account number format
 
             string mainPart = parts[0]; // "3000"
             string subPart = parts[1];  // "A01"
@@ -996,7 +1140,7 @@ namespace PlugIn_1.Forms
             // Format mainPart to 3 digits
             if (mainPart.Length > 3) mainPart = mainPart.Substring(0, 3);
 
-            // Format subPart: letters + numbers with leading zeros
+            // Format subPart in the form of letters + numbers with leading zeros
             string alpha = new string(subPart.Where(c => char.IsLetter(c)).ToArray()); // "A"
             string digit = new string(subPart.Where(c => char.IsDigit(c)).ToArray());  // "01"
 
@@ -1007,7 +1151,12 @@ namespace PlugIn_1.Forms
 
         private string DefStatus()
         {
-            return chk_overwriteExistData.Checked ? "Updated" : "Added new";
+            return chk_overwriteExistData.Checked ? "Updated" : "Added new"; // Indicate data overwrite
+        }
+
+        private string DefStatus(bool hasExistData)
+        {
+            return hasExistData ? "Updated" : "Added new"; // Indicate data overwrite based on existing data
         }
     }
 }
