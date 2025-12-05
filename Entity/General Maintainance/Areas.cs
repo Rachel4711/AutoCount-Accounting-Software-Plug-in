@@ -1,9 +1,5 @@
 ﻿using AutoCount.Authentication;
 using AutoCount.GeneralMaint.Area;
-using AutoCount.Exceptions;
-using System;
-using AutoCount.Data;
-using AutoCount.Data.EntityFramework;
 
 namespace PlugIn_1.Entity.General_Maintainance
 {
@@ -11,16 +7,18 @@ namespace PlugIn_1.Entity.General_Maintainance
     {
         private readonly UserSession session;
 
+        private readonly AreaCommand cmd;
+
         public Areas(UserSession userSession)
         {
             session = userSession;
+
+            cmd = AreaCommand.Create(session, session.DBSetting);
         }
 
         public string CreateOrUpdate_Area(bool isOverwrite, string area_name, string desc = "")
         {
-            AreaCommand cmd = AreaCommand.Create(session, session.DBSetting);
-
-            AreaEntity area = isOverwrite ? cmd.GetArea(area_name) : cmd.NewArea();
+            AreaEntity area = isOverwrite && hasAreas(area_name) ? cmd.GetArea(area_name) : cmd.NewArea();
 
             area.AreaCode = area_name;
             area.Description = desc;
@@ -32,9 +30,12 @@ namespace PlugIn_1.Entity.General_Maintainance
 
         public bool hasAreas(string area_code)
         {
-            AreaCommand cmd = AreaCommand.Create(session, session.DBSetting);
-
             return cmd.GetArea(area_code) != null;
+        }
+
+        public void DeleteArea(string area_code)
+        {
+            cmd.DeleteArea(area_code);
         }
     }
 }

@@ -1,25 +1,23 @@
 ﻿using AutoCount.Authentication;
 using AutoCount.Stock.ItemType;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PlugIn_1.Entity.Stock
 {
     internal class ItemTypes
     {
-        private UserSession session;
+        private readonly UserSession session;
+
+        private readonly ItemTypeCommand cmd;
 
         public ItemTypes(UserSession userSession)
         {
-            userSession = session;
+            session = userSession;
+
+            cmd = ItemTypeCommand.Create(session, session.DBSetting);
         }
 
         public string CreateOrUpdate_ItemType(string item_type)
         {
-            ItemTypeCommand cmd = ItemTypeCommand.Create(session, session.DBSetting);
             ItemTypeEntity itemType = cmd.NewItemType();
 
             itemType.ItemType = item_type;
@@ -30,8 +28,6 @@ namespace PlugIn_1.Entity.Stock
 
         public bool hasItemType(string item_type)
         {
-            ItemTypeCommand cmd = ItemTypeCommand.Create(session, session.DBSetting);
-
             return cmd.GetItemType(item_type) != null;
         }
     }

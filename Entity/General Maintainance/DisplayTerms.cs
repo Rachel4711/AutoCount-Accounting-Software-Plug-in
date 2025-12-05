@@ -1,8 +1,4 @@
-﻿using AutoCount.ARAP;
-using AutoCount.Authentication;
-using AutoCount.Data.EntityFramework;
-using AutoCount.Document;
-using AutoCount.GeneralMaint.Area;
+﻿using AutoCount.Authentication;
 using AutoCount.GeneralMaint.Terms;
 using System.Data;
 
@@ -11,16 +7,18 @@ namespace PlugIn_1.Entity.General_Maintainance
     internal class DisplayTerms
     {
         private readonly UserSession session;
-        
+
+        private readonly TermsMaintenance termsMaintenance;
+
         public DisplayTerms(UserSession userSession)
         {
             session = userSession;
+
+            termsMaintenance = TermsMaintenance.CreateTermsMaint(session, session.DBSetting);
         }
 
         public string Create_DisplayTerm(string term)
         {
-            TermsMaintenance termsMaintenance = TermsMaintenance.CreateTermsMaint(session, session.DBSetting);
-
             termsMaintenance.Load();
 
             DataRow row = termsMaintenance.DataTableTerms.NewRow();
@@ -38,8 +36,6 @@ namespace PlugIn_1.Entity.General_Maintainance
 
         public bool hasDisplayTerm(string term)
         {
-            TermsMaintenance termsMaintenance = TermsMaintenance.CreateTermsMaint(session, session.DBSetting);
-
             termsMaintenance.Load();
 
             foreach (DataRow row in termsMaintenance.DataTableTerms.Rows)

@@ -1,5 +1,4 @@
 ﻿using AutoCount.ARAP.Creditor;
-using AutoCount.ARAP.Debtor;
 using AutoCount.Authentication;
 using AutoCount.Data;
 using AutoCount.GL;
@@ -14,58 +13,48 @@ namespace PlugIn_1.Entity
     {
         private readonly UserSession session;
 
+        private CreditorDataAccess access;
+        private AccountHelper accountHelper;
+
         internal Creditor(UserSession userSession)
         {
             session = userSession;
+
+            accountHelper = AccountHelper.Create(session.DBSetting);
+            access = CreditorDataAccess.Create(session, session.DBSetting);
         }
 
-        public void CreateOrUpdate_Creditor(bool isOverwrite, string acc_no, DbfDataReader.DbfDataReader dbfDataReader)
+        public void CreateOrUpdate_Creditor(bool isOverwrite, string acc_no, DbfDataReader.DbfDataReader dbfData)
         {
-            CreditorDataAccess access = CreditorDataAccess.Create(session, session.DBSetting);
-
-            CreditorEntity creditor = isOverwrite && hasCreditor(acc_no) ? 
+            CreditorEntity creditor = isOverwrite && hasCreditor(acc_no, dbfData.GetString(2)) ? 
                 access.GetCreditor(acc_no) : access.NewCreditor();
 
-            creditor.ControlAccount = getDefaultCtrlAcc();
+            creditor.ControlAccount = getCreditorCtrlAcc();
 
             creditor.AccNo           = acc_no;
-            creditor.CompanyName     = dbfDataReader.GetString(2);
-            creditor.Address1        = dbfDataReader.GetString(4);
-            creditor.Address2        = dbfDataReader.GetString(5);
-            creditor.Address3        = dbfDataReader.GetString(6);
-            creditor.Address4        = dbfDataReader.GetString(7);
-            creditor.Attention       = dbfDataReader.GetString(9);
-            creditor.Mobile          = dbfDataReader.GetString(14);
-            creditor.Phone1          = dbfDataReader.GetString(15);
-            creditor.Phone2          = dbfDataReader.GetString(16);
-            creditor.Fax1            = dbfDataReader.GetString(17);
-            creditor.EmailAddress    = dbfDataReader.GetString(18);
-            creditor.WebURL          = dbfDataReader.GetString(19);
-            creditor.AreaCode        = setArea         (dbfDataReader.GetString(22));
-            creditor.PurchaseAgent   = setPurchaseAgent(dbfDataReader.GetString(23));
-            creditor.CurrencyCode    = setCurrency(session.DBSetting, dbfDataReader.GetString(27));
-            creditor.DisplayTerm     = setDisplayTerm(creditor.DisplayTerm, dbfDataReader.GetString(25));
-            creditor.CreditLimit     = dbfDataReader.GetDecimal(26);
-
-            if (!isCreditorCtrlAcc(creditor.ControlAccount))
-            {
-                throw new Exception($"\"{creditor.ControlAccount}\" is not a control account. Please try with another value.");
-            }
+            creditor.CompanyName     = dbfData.GetString(2);
+            creditor.Address1        = dbfData.GetString(4);
+            creditor.Address2        = dbfData.GetString(5);
+            creditor.Address3        = dbfData.GetString(6);
+            creditor.Address4        = dbfData.GetString(7);
+            creditor.Attention       = dbfData.GetString(9);
+            creditor.Mobile          = dbfData.GetString(14);
+            creditor.Phone1          = dbfData.GetString(15);
+            creditor.Phone2          = dbfData.GetString(16);
+            creditor.Fax1            = dbfData.GetString(17);
+            creditor.EmailAddress    = dbfData.GetString(18);
+            creditor.WebURL          = dbfData.GetString(19);
+            creditor.AreaCode        = setArea         (dbfData.GetString(22));
+            creditor.PurchaseAgent   = setPurchaseAgent(dbfData.GetString(23));
+            creditor.CurrencyCode    = setCurrency(session.DBSetting, dbfData.GetString(27));
+            creditor.DisplayTerm     = setDisplayTerm(creditor.DisplayTerm, dbfData.GetString(25));
+            creditor.CreditLimit     = dbfData.GetDecimal(26);
 
             access.SaveCreditor(creditor, session.LoginUserID);
         }
 
-        private bool isCreditorCtrlAcc(string creditorCtrlAcc)
+        private string getCreditorCtrlAcc()
         {
-            AccountHelper accountHelper = AccountHelper.Create(session.DBSetting);
-
-            return accountHelper.GetCreditorControlAccounts().Contains(creditorCtrlAcc);
-        }
-
-        private string getDefaultCtrlAcc()
-        {
-            AccountHelper accountHelper = AccountHelper.Create(session.DBSetting);
-
             return accountHelper.GetCreditorControlAccounts().First();
         }
 
@@ -101,20 +90,30 @@ namespace PlugIn_1.Entity
             Currencies currencies = new Currencies(session);
 
             return currencies.hasCurrency(currency_code) ?
-                currency_code : DBRegistry.Create(dbSetting).GetString(new LocalCurrencyCode());
+                currency_code : currency_code == "" ?
+                    DBRegistry.Create(dbSetting).GetString(new LocalCurrencyCode()) :
+                    currencies.CreateOrUpdate_Currency(false, currency_code);
+        }
+
+        public bool hasCreditor(string acc_no, string com_name)
+        {
+            try
+            { return com_name == access.GetCreditor(acc_no).CompanyName; }
+            catch (CreditorRecordNotFoundException)
+            { return false; }
         }
 
         public bool hasCreditor(string acc_no)
         {
             try
-            {
-                CreditorDataAccess.Create(session, session.DBSetting).GetCreditor(acc_no);
-                return true;
-            }
-            catch (DebtorRecordNotFoundException)
-            {
-                return false;
-            }
+            { return access.GetCreditor(acc_no) != null; }
+            catch (CreditorRecordNotFoundException)
+            { return false; }
+        }
+
+        public void DeleteCreditor(string acc_no)
+        {
+            access.DeleteCreditor(acc_no);
         }
     }
 }

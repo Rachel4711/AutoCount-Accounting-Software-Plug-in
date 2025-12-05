@@ -1,6 +1,5 @@
 ﻿using AutoCount.Authentication;
 using AutoCount.Stock.Item;
-using AutoCount.Stock.Location;
 using AutoCount.Utils;
 using PlugIn_1.Entity.Stock;
 using ItemGroups = PlugIn_1.Entity.Stock.ItemGroups;
@@ -10,48 +9,50 @@ namespace PlugIn_1.Entity
 {
     public class Items
     {
-        private UserSession session;
-        
+        private readonly UserSession session;
+
+        private readonly ItemDataAccess access;
+
         internal Items(UserSession userSession)
         {
             session = userSession;
+
+            access = ItemDataAccess.Create(session, session.DBSetting);
         }
 
-        internal void CreateOrUpdate_Item(bool isOverwrite, DbfDataReader.DbfDataReader dbfDataReader)
+        internal void CreateOrUpdate_Item(bool isOverwrite, DbfDataReader.DbfDataReader dbfData)
         {
-            string item_code = dbfDataReader.GetString(1);
+            string item_code = dbfData.GetString(1);
 
-            ItemDataAccess access = ItemDataAccess.Create(session, session.DBSetting);
-            
-            ItemEntity item = isOverwrite ? 
+            ItemEntity item = isOverwrite && hasStockItem(item_code) ? 
                 access.LoadItem(item_code, ItemEntryAction.Edit) : access.NewItem();
 
             item.ItemCode            = item_code;
-            item.Description         = dbfDataReader.GetString(9);
-            item.FurtherDescription  = RtfUtils.ToArialRichText(dbfDataReader.GetString(10));
-            item.ItemCategory        = setItemCategory(dbfDataReader.GetString(4));
-            item.ItemGroup           = setItemGroup(dbfDataReader.GetString(5));
-            item.ItemBrand           = setItemBrand(dbfDataReader.GetString(11));
-            item.ItemType            = setItemType(dbfDataReader.GetString(218));
+            item.Description         = dbfData.GetString(9);
+            item.FurtherDescription  = RtfUtils.ToArialRichText(dbfData.GetString(10));
+            item.ItemCategory        = setItemCategory  (dbfData.GetString(4));
+            item.ItemGroup           = setItemGroup     (dbfData.GetString(5));
+            item.ItemBrand           = setItemBrand     (dbfData.GetString(11));
+            item.ItemType            = setItemType      (dbfData.GetString(218));
 
             ItemUomEntity itemUom;
             
             if (item.UomCount > 0)
             {
                 itemUom = item.GetUom(0);
-                itemUom.Uom = dbfDataReader.GetString(17);
+                itemUom.Uom = dbfData.GetString(17);
             }
             else
             {
-                itemUom = item.NewUom(dbfDataReader.GetString(17), 1);
+                itemUom = item.NewUom(dbfData.GetString(17), 1);
             }
 
             item.CostingMethod = 1;
 
-            itemUom.Weight               = dbfDataReader.GetDecimal(13);
-            itemUom.StandardCost         = dbfDataReader.GetDecimal(18);
-            itemUom.StandardSellingPrice = dbfDataReader.GetDecimal(19);
-            itemUom.MinSalePrice         = dbfDataReader.GetDecimal(23);
+            itemUom.Weight               = dbfData.GetDecimal(13);
+            itemUom.StandardCost         = dbfData.GetDecimal(18);
+            itemUom.StandardSellingPrice = dbfData.GetDecimal(19);
+            itemUom.MinSalePrice         = dbfData.GetDecimal(23);
             itemUom.Rate = 1;
 
             access.SaveData(item);
@@ -91,6 +92,11 @@ namespace PlugIn_1.Entity
             return types.hasItemType(item_type) ? 
                 item_type : item_type != "" ? 
                 types.CreateOrUpdate_ItemType(item_type) : null;
+        }
+
+        private bool hasStockItem(string item_code)
+        {
+            return access.LoadItem(item_code, ItemEntryAction.Edit) != null;
         }
     }
 }

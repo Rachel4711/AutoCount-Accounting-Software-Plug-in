@@ -1,17 +1,6 @@
 ﻿using AutoCount.Data;
-using DevExpress.Emf;
-using DevExpress.Utils;
-using DevExpress.XtraEditors;
-using Microsoft.Identity.Client;
 using PlugIn_1.Entity;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -33,16 +22,6 @@ namespace PlugIn_1.Forms
                 Select();
                 Program.appHasLoaded = true;
             }
-        }
-
-        private void comboBox_ServName_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            
-        }
-
-        private void comboBox_DBName_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            
         }
 
         private void comboBox_ServName_TextChanged(object sender, EventArgs e)

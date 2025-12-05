@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(UBSDataMigrateForm));
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             this.label_Debtor_Title = new System.Windows.Forms.Label();
             this.txt_path_AccFolder = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
@@ -44,7 +44,7 @@
             this.label7 = new System.Windows.Forms.Label();
             this.nud_recRangeStart = new System.Windows.Forms.NumericUpDown();
             this.label8 = new System.Windows.Forms.Label();
-            this.dataSet1 = new System.Data.DataSet();
+            this.dataSet_ImportTables = new System.Data.DataSet();
             this.dgv_selTblImport = new System.Windows.Forms.DataGridView();
             this.btn_import = new System.Windows.Forms.Button();
             this.button_exit = new System.Windows.Forms.Button();
@@ -55,18 +55,21 @@
             this.label12 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
             this.gb_dataMigrate = new System.Windows.Forms.GroupBox();
+            this.idc_warning = new System.Windows.Forms.Label();
+            this.chk_overwriteExistData = new System.Windows.Forms.CheckBox();
+            this.btn_resetAllRange = new System.Windows.Forms.Button();
+            this.chk_reformatAccNo = new System.Windows.Forms.CheckBox();
             this.label9 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
-            this.chk_overwriteExistData = new System.Windows.Forms.CheckBox();
-            this.chk_reformatAccNo = new System.Windows.Forms.CheckBox();
             this.lb_copied = new System.Windows.Forms.Label();
             this.btn_rangeHelp = new System.Windows.Forms.Button();
             this.gb_recRangeSet = new System.Windows.Forms.GroupBox();
-            this.btn_resetAllRange = new System.Windows.Forms.Button();
+            this.label11 = new System.Windows.Forms.Label();
+            this.label10 = new System.Windows.Forms.Label();
             this.btn_resetRange = new System.Windows.Forms.Button();
             this.label6 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.nud_recRangeStart)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.dataSet1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dataSet_ImportTables)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgv_selTblImport)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_recRangeEnd)).BeginInit();
             this.gb_dataMigrate.SuspendLayout();
@@ -198,7 +201,7 @@
             // 
             this.label7.AutoSize = true;
             this.label7.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label7.Location = new System.Drawing.Point(15, 101);
+            this.label7.Location = new System.Drawing.Point(15, 95);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(107, 16);
             this.label7.TabIndex = 40;
@@ -220,13 +223,13 @@
             this.label8.ForeColor = System.Drawing.SystemColors.WindowFrame;
             this.label8.Location = new System.Drawing.Point(9, 15);
             this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(91, 16);
+            this.label8.Size = new System.Drawing.Size(56, 16);
             this.label8.TabIndex = 43;
-            this.label8.Text = "Import until no.";
+            this.label8.Text = "End with";
             // 
-            // dataSet1
+            // dataSet_ImportTables
             // 
-            this.dataSet1.DataSetName = "NewDataSet";
+            this.dataSet_ImportTables.DataSetName = "NewDataSet";
             // 
             // dgv_selTblImport
             // 
@@ -243,10 +246,10 @@
             this.dgv_selTblImport.Name = "dgv_selTblImport";
             this.dgv_selTblImport.RowHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.None;
             this.dgv_selTblImport.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.AutoSizeToDisplayedHeaders;
-            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
-            this.dgv_selTblImport.RowsDefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
+            this.dgv_selTblImport.RowsDefaultCellStyle = dataGridViewCellStyle1;
             this.dgv_selTblImport.ShowEditingIcon = false;
-            this.dgv_selTblImport.Size = new System.Drawing.Size(589, 171);
+            this.dgv_selTblImport.Size = new System.Drawing.Size(589, 184);
             this.dgv_selTblImport.TabIndex = 45;
             this.dgv_selTblImport.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgv_selTblImport_CellContentClick);
             this.dgv_selTblImport.CurrentCellDirtyStateChanged += new System.EventHandler(this.dgv_selTblImport_CurrentCellDirtyStateChanged);
@@ -257,7 +260,7 @@
             // btn_import
             // 
             this.btn_import.Font = new System.Drawing.Font("Microsoft YaHei UI", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btn_import.Location = new System.Drawing.Point(626, 254);
+            this.btn_import.Location = new System.Drawing.Point(626, 267);
             this.btn_import.Name = "btn_import";
             this.btn_import.Size = new System.Drawing.Size(162, 29);
             this.btn_import.TabIndex = 48;
@@ -347,11 +350,13 @@
             // gb_dataMigrate
             // 
             this.gb_dataMigrate.BackColor = System.Drawing.SystemColors.Control;
+            this.gb_dataMigrate.Controls.Add(this.idc_warning);
+            this.gb_dataMigrate.Controls.Add(this.chk_overwriteExistData);
+            this.gb_dataMigrate.Controls.Add(this.btn_resetAllRange);
+            this.gb_dataMigrate.Controls.Add(this.chk_reformatAccNo);
             this.gb_dataMigrate.Controls.Add(this.label7);
             this.gb_dataMigrate.Controls.Add(this.label9);
             this.gb_dataMigrate.Controls.Add(this.label2);
-            this.gb_dataMigrate.Controls.Add(this.chk_overwriteExistData);
-            this.gb_dataMigrate.Controls.Add(this.chk_reformatAccNo);
             this.gb_dataMigrate.Controls.Add(this.lb_copied);
             this.gb_dataMigrate.Controls.Add(this.btn_rangeHelp);
             this.gb_dataMigrate.Controls.Add(this.label5);
@@ -370,49 +375,80 @@
             this.gb_dataMigrate.Size = new System.Drawing.Size(803, 592);
             this.gb_dataMigrate.TabIndex = 57;
             this.gb_dataMigrate.TabStop = false;
+            this.gb_dataMigrate.MouseCaptureChanged += new System.EventHandler(this.btn_copyImportStus_Leave);
+            // 
+            // idc_warning
+            // 
+            this.idc_warning.AutoSize = true;
+            this.idc_warning.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.idc_warning.Location = new System.Drawing.Point(605, 274);
+            this.idc_warning.Name = "idc_warning";
+            this.idc_warning.Size = new System.Drawing.Size(0, 16);
+            this.idc_warning.TabIndex = 66;
+            this.idc_warning.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
+            // chk_overwriteExistData
+            // 
+            this.chk_overwriteExistData.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.chk_overwriteExistData.AutoSize = true;
+            this.chk_overwriteExistData.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
+            this.chk_overwriteExistData.Location = new System.Drawing.Point(15, 273);
+            this.chk_overwriteExistData.MaximumSize = new System.Drawing.Size(15, 15);
+            this.chk_overwriteExistData.Name = "chk_overwriteExistData";
+            this.chk_overwriteExistData.Padding = new System.Windows.Forms.Padding(1);
+            this.chk_overwriteExistData.Size = new System.Drawing.Size(15, 15);
+            this.chk_overwriteExistData.TabIndex = 61;
+            this.chk_overwriteExistData.TabStop = false;
+            this.chk_overwriteExistData.UseVisualStyleBackColor = true;
+            // 
+            // btn_resetAllRange
+            // 
+            this.btn_resetAllRange.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btn_resetAllRange.Location = new System.Drawing.Point(16, 179);
+            this.btn_resetAllRange.Name = "btn_resetAllRange";
+            this.btn_resetAllRange.Size = new System.Drawing.Size(87, 24);
+            this.btn_resetAllRange.TabIndex = 62;
+            this.btn_resetAllRange.Text = "Reset All";
+            this.btn_resetAllRange.UseVisualStyleBackColor = true;
+            this.btn_resetAllRange.Click += new System.EventHandler(this.btn_resetAllRange_Click);
+            // 
+            // chk_reformatAccNo
+            // 
+            this.chk_reformatAccNo.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.chk_reformatAccNo.AutoSize = true;
+            this.chk_reformatAccNo.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
+            this.chk_reformatAccNo.Location = new System.Drawing.Point(15, 246);
+            this.chk_reformatAccNo.MaximumSize = new System.Drawing.Size(15, 15);
+            this.chk_reformatAccNo.Name = "chk_reformatAccNo";
+            this.chk_reformatAccNo.Padding = new System.Windows.Forms.Padding(1);
+            this.chk_reformatAccNo.Size = new System.Drawing.Size(15, 15);
+            this.chk_reformatAccNo.TabIndex = 60;
+            this.chk_reformatAccNo.TabStop = false;
+            this.chk_reformatAccNo.UseVisualStyleBackColor = true;
             // 
             // label9
             // 
             this.label9.AutoSize = true;
             this.label9.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label9.Location = new System.Drawing.Point(31, 232);
+            this.label9.Location = new System.Drawing.Point(34, 245);
             this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(500, 16);
+            this.label9.Size = new System.Drawing.Size(484, 16);
             this.label9.TabIndex = 64;
-            this.label9.Text = "Apply account number formatting of AutoCount Accounting to customer and supplier." +
-    "";
+            this.label9.Text = "Use AutoCount account number formatting (AAA-AAAA) for every single accounts";
             // 
             // label2
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(31, 259);
+            this.label2.Location = new System.Drawing.Point(34, 272);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(359, 16);
+            this.label2.Size = new System.Drawing.Size(356, 16);
             this.label2.TabIndex = 63;
-            this.label2.Text = "Overwrite existing data with data in selected backup folders.";
-            // 
-            // chk_overwriteExistData
-            // 
-            this.chk_overwriteExistData.AutoSize = true;
-            this.chk_overwriteExistData.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
-            this.chk_overwriteExistData.Location = new System.Drawing.Point(15, 260);
-            this.chk_overwriteExistData.Name = "chk_overwriteExistData";
-            this.chk_overwriteExistData.Size = new System.Drawing.Size(15, 14);
-            this.chk_overwriteExistData.TabIndex = 61;
-            this.chk_overwriteExistData.TabStop = false;
-            this.chk_overwriteExistData.UseVisualStyleBackColor = true;
-            // 
-            // chk_reformatAccNo
-            // 
-            this.chk_reformatAccNo.AutoSize = true;
-            this.chk_reformatAccNo.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
-            this.chk_reformatAccNo.Location = new System.Drawing.Point(15, 234);
-            this.chk_reformatAccNo.Name = "chk_reformatAccNo";
-            this.chk_reformatAccNo.Size = new System.Drawing.Size(15, 14);
-            this.chk_reformatAccNo.TabIndex = 60;
-            this.chk_reformatAccNo.TabStop = false;
-            this.chk_reformatAccNo.UseVisualStyleBackColor = true;
+            this.label2.Text = "Overwrite existing data with data in selected backup folders";
             // 
             // lb_copied
             // 
@@ -433,7 +469,7 @@
             this.btn_rangeHelp.FlatAppearance.BorderSize = 5;
             this.btn_rangeHelp.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(192)))), ((int)(((byte)(255)))));
             this.btn_rangeHelp.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
-            this.btn_rangeHelp.Location = new System.Drawing.Point(126, 99);
+            this.btn_rangeHelp.Location = new System.Drawing.Point(126, 93);
             this.btn_rangeHelp.Name = "btn_rangeHelp";
             this.btn_rangeHelp.Size = new System.Drawing.Size(37, 21);
             this.btn_rangeHelp.TabIndex = 58;
@@ -444,30 +480,42 @@
             // gb_recRangeSet
             // 
             this.gb_recRangeSet.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
+            this.gb_recRangeSet.Controls.Add(this.label11);
+            this.gb_recRangeSet.Controls.Add(this.label10);
             this.gb_recRangeSet.Controls.Add(this.nud_recRangeEnd);
-            this.gb_recRangeSet.Controls.Add(this.btn_resetAllRange);
             this.gb_recRangeSet.Controls.Add(this.label8);
             this.gb_recRangeSet.Controls.Add(this.btn_resetRange);
             this.gb_recRangeSet.Controls.Add(this.nud_recRangeStart);
             this.gb_recRangeSet.Controls.Add(this.label6);
             this.gb_recRangeSet.Enabled = false;
             this.gb_recRangeSet.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.gb_recRangeSet.Location = new System.Drawing.Point(6, 120);
+            this.gb_recRangeSet.Location = new System.Drawing.Point(6, 114);
             this.gb_recRangeSet.Name = "gb_recRangeSet";
             this.gb_recRangeSet.Size = new System.Drawing.Size(187, 96);
             this.gb_recRangeSet.TabIndex = 65;
             this.gb_recRangeSet.TabStop = false;
             // 
-            // btn_resetAllRange
+            // label11
             // 
-            this.btn_resetAllRange.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btn_resetAllRange.Location = new System.Drawing.Point(10, 65);
-            this.btn_resetAllRange.Name = "btn_resetAllRange";
-            this.btn_resetAllRange.Size = new System.Drawing.Size(87, 24);
-            this.btn_resetAllRange.TabIndex = 62;
-            this.btn_resetAllRange.Text = "Reset All";
-            this.btn_resetAllRange.UseVisualStyleBackColor = true;
-            this.btn_resetAllRange.Click += new System.EventHandler(this.btn_resetAllRange_Click);
+            this.label11.AutoSize = true;
+            this.label11.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label11.ForeColor = System.Drawing.SystemColors.WindowFrame;
+            this.label11.Location = new System.Drawing.Point(73, 41);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(28, 16);
+            this.label11.TabIndex = 61;
+            this.label11.Text = "No.";
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label10.ForeColor = System.Drawing.SystemColors.WindowFrame;
+            this.label10.Location = new System.Drawing.Point(73, 15);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(28, 16);
+            this.label10.TabIndex = 60;
+            this.label10.Text = "No.";
             // 
             // btn_resetRange
             // 
@@ -487,9 +535,9 @@
             this.label6.ForeColor = System.Drawing.SystemColors.WindowFrame;
             this.label6.Location = new System.Drawing.Point(9, 41);
             this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(92, 16);
+            this.label6.Size = new System.Drawing.Size(63, 16);
             this.label6.TabIndex = 59;
-            this.label6.Text = "Begin from no.";
+            this.label6.Text = "Start from";
             // 
             // UBSDataMigrateForm
             // 
@@ -513,7 +561,7 @@
             this.Text = "Migrate UBS Account";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.UBSDataMigrateForm_FormClosing);
             ((System.ComponentModel.ISupportInitialize)(this.nud_recRangeStart)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.dataSet1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dataSet_ImportTables)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgv_selTblImport)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nud_recRangeEnd)).EndInit();
             this.gb_dataMigrate.ResumeLayout(false);
@@ -541,7 +589,7 @@
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.NumericUpDown nud_recRangeStart;
         private System.Windows.Forms.Label label8;
-        private System.Data.DataSet dataSet1;
+        private System.Data.DataSet dataSet_ImportTables;
         private System.Windows.Forms.DataGridView dgv_selTblImport;
         private System.Windows.Forms.Button btn_import;
         private System.Windows.Forms.Button button_exit;
@@ -562,5 +610,8 @@
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.GroupBox gb_recRangeSet;
+        private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.Label idc_warning;
     }
 }

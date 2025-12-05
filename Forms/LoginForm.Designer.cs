@@ -46,17 +46,19 @@
             this.btn_search_SN = new System.Windows.Forms.Button();
             this.btn_search_DBN = new System.Windows.Forms.Button();
             this.loadingGif = new AutoCount.Controls.LoadingGif();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
             // lbl_title
             // 
             this.lbl_title.AutoSize = true;
-            this.lbl_title.Font = new System.Drawing.Font("Microsoft YaHei UI", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lbl_title.Location = new System.Drawing.Point(149, 32);
+            this.lbl_title.Font = new System.Drawing.Font("Microsoft YaHei UI", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lbl_title.Location = new System.Drawing.Point(39, 41);
             this.lbl_title.Name = "lbl_title";
-            this.lbl_title.Size = new System.Drawing.Size(274, 19);
+            this.lbl_title.Size = new System.Drawing.Size(289, 20);
             this.lbl_title.TabIndex = 0;
-            this.lbl_title.Text = "Connect to Auto Count Accounting";
+            this.lbl_title.Text = "Connecting to Auto Count Accounting";
             // 
             // label_ServName
             // 
@@ -182,7 +184,6 @@
             this.comboBox_ServName.Name = "comboBox_ServName";
             this.comboBox_ServName.Size = new System.Drawing.Size(213, 24);
             this.comboBox_ServName.TabIndex = 20;
-            this.comboBox_ServName.SelectedIndexChanged += new System.EventHandler(this.comboBox_ServName_SelectedIndexChanged);
             this.comboBox_ServName.TextChanged += new System.EventHandler(this.comboBox_ServName_TextChanged);
             // 
             // comboBox_DBName
@@ -194,7 +195,6 @@
             this.comboBox_DBName.Name = "comboBox_DBName";
             this.comboBox_DBName.Size = new System.Drawing.Size(213, 24);
             this.comboBox_DBName.TabIndex = 21;
-            this.comboBox_DBName.SelectedIndexChanged += new System.EventHandler(this.comboBox_DBName_SelectedIndexChanged);
             this.comboBox_DBName.TextChanged += new System.EventHandler(this.comboBox_DBName_TextChanged);
             // 
             // btn_search_SN
@@ -220,7 +220,7 @@
             // 
             // loadingGif
             // 
-            this.loadingGif.Location = new System.Drawing.Point(501, 300);
+            this.loadingGif.Location = new System.Drawing.Point(160, 82);
             this.loadingGif.MaximumSize = new System.Drawing.Size(48, 48);
             this.loadingGif.MinimumSize = new System.Drawing.Size(48, 48);
             this.loadingGif.Name = "loadingGif";
@@ -228,14 +228,24 @@
             this.loadingGif.TabIndex = 25;
             this.loadingGif.Visible = false;
             // 
+            // groupBox1
+            // 
+            this.groupBox1.Controls.Add(this.lbl_title);
+            this.groupBox1.Controls.Add(this.loadingGif);
+            this.groupBox1.Location = new System.Drawing.Point(-2, -9);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(368, 166);
+            this.groupBox1.TabIndex = 26;
+            this.groupBox1.TabStop = false;
+            // 
             // LoginForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
-            this.ClientSize = new System.Drawing.Size(561, 360);
-            this.Controls.Add(this.loadingGif);
+            this.ClientSize = new System.Drawing.Size(364, 155);
+            this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.btn_search_DBN);
             this.Controls.Add(this.btn_search_SN);
             this.Controls.Add(this.comboBox_DBName);
@@ -251,11 +261,12 @@
             this.Controls.Add(this.label_DBName);
             this.Controls.Add(this.lb_blank_SN);
             this.Controls.Add(this.label_ServName);
-            this.Controls.Add(this.lbl_title);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "LoginForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Connect to Auto Count";
+            this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -280,5 +291,6 @@
         private System.Windows.Forms.Button btn_search_SN;
         private System.Windows.Forms.Button btn_search_DBN;
         private AutoCount.Controls.LoadingGif loadingGif;
+        private System.Windows.Forms.GroupBox groupBox1;
     }
 }

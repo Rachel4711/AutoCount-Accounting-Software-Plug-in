@@ -1,20 +1,15 @@
 ﻿using AutoCount.Authentication;
 using AutoCount.Stock.Location;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PlugIn_1.Entity.Stock
 {
     internal class Locations
     {
-        private UserSession session;
+        private readonly UserSession session;
 
         public Locations(UserSession userSession)
         {
-            userSession = session;
+            session = userSession;
         }
 
         internal void CreateOrUpdate_Location(bool isOverwrite, string location, string desc = "")

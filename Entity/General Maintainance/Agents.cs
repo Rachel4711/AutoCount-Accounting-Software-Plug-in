@@ -1,8 +1,6 @@
 ﻿using AutoCount.Authentication;
-using AutoCount.GeneralMaint.Area;
 using AutoCount.GeneralMaint.PurchaseAgent;
 using AutoCount.GeneralMaint.SalesAgent;
-using AutoCount.UDF;
 
 namespace PlugIn_1.Entity.General_Maintainance
 {
@@ -10,16 +8,21 @@ namespace PlugIn_1.Entity.General_Maintainance
     {
         private readonly UserSession session;
 
+        private readonly SalesAgentCommand sa_cmd;
+        private readonly PurchaseAgentCommand pa_cmd;
+
         public Agents(UserSession userSession)
         {
             session = userSession;
+
+            sa_cmd = SalesAgentCommand.Create(session, session.DBSetting);
+            pa_cmd = PurchaseAgentCommand.Create(session, session.DBSetting);
         }
 
         public string CreateOrUpdate_SalesAgent(bool isOverwrite, string agentName, string agentDesc = "", string agentEmail = "")
         {
-            SalesAgentCommand cmd = SalesAgentCommand.Create(session, session.DBSetting);
-
-            SalesAgentEntity agent = isOverwrite ? cmd.GetSalesAgent(agentName) : cmd.NewSalesAgent();
+            SalesAgentEntity agent = isOverwrite && hasSalesAgents(agentName) ? 
+                sa_cmd.GetSalesAgent(agentName) : sa_cmd.NewSalesAgent();
 
             agent.SalesAgent = agentName;
             agent.Description = agentDesc;
@@ -32,9 +35,8 @@ namespace PlugIn_1.Entity.General_Maintainance
 
         public string CreateOrUpdate_PurchaseAgent(bool isOverwrite, string agentName, string agentDesc = "")
         {
-            PurchaseAgentCommand cmd = PurchaseAgentCommand.Create(session, session.DBSetting);
-
-            PurchaseAgentEntity agent = isOverwrite ? cmd.GetPurchaseAgent(agentName) : cmd.NewPurchaseAgent();
+            PurchaseAgentEntity agent = isOverwrite && hasPurchaseAgents(agentName) ? 
+                pa_cmd.GetPurchaseAgent(agentName) : pa_cmd.NewPurchaseAgent();
 
             agent.PurchaseAgent = agentName;
             agent.Description = agentDesc;
@@ -44,18 +46,14 @@ namespace PlugIn_1.Entity.General_Maintainance
             return agentName;
         }
 
-        public bool hasSalesAgents(string agent_name)
+        internal bool hasSalesAgents(string agent_name)
         {
-            SalesAgentCommand cmd = SalesAgentCommand.Create(session, session.DBSetting);
-
-            return cmd.GetSalesAgent(agent_name) != null;
+            return sa_cmd.GetSalesAgent(agent_name) != null;
         }
 
-        public bool hasPurchaseAgents(string agent_name)
+        internal bool hasPurchaseAgents(string agent_name)
         {
-            PurchaseAgentCommand cmd = PurchaseAgentCommand.Create(session, session.DBSetting);
-
-            return cmd.GetPurchaseAgent(agent_name) != null;
+            return pa_cmd.GetPurchaseAgent(agent_name) != null;
         }
     }
 }

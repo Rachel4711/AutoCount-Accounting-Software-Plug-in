@@ -1,7 +1,5 @@
 ﻿using AutoCount.Authentication;
 using AutoCount.GeneralMaint.Currency;
-using AutoCount.GeneralMaint.PurchaseAgent;
-using AutoCount.GeneralMaint.SalesAgent;
 
 namespace PlugIn_1.Entity.General_Maintainance
 {
@@ -9,16 +7,19 @@ namespace PlugIn_1.Entity.General_Maintainance
     {
         private readonly UserSession session;
 
+        private readonly CurrencyCommand cmd;
+
         public Currencies(UserSession userSession)
         {
             session = userSession;
+
+            cmd = CurrencyCommand.Create(session, session.DBSetting);
         }
 
         public string CreateOrUpdate_Currency(bool isOverwrite, string currencyCode, string currencyWord = "")
         {
-            CurrencyCommand cmd = CurrencyCommand.Create(session, session.DBSetting);
-
-            CurrencyEntity currency = isOverwrite ? cmd.GetCurrency(currencyCode) : cmd.NewCurrency();
+            CurrencyEntity currency = isOverwrite && hasCurrency(currencyCode) ? 
+                cmd.GetCurrency(currencyCode) : cmd.NewCurrency();
 
             currency.CurrencyCode = currencyCode;
             currency.CurrencyWord = currencyWord;
@@ -30,8 +31,6 @@ namespace PlugIn_1.Entity.General_Maintainance
 
         public bool hasCurrency(string currency_code)
         {
-            CurrencyCommand cmd = CurrencyCommand.Create(session, session.DBSetting);
-
             return cmd.GetCurrency(currency_code) != null;
         }
     }

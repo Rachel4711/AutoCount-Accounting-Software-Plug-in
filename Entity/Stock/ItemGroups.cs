@@ -1,28 +1,24 @@
 ﻿using AutoCount.Authentication;
-using AutoCount.Data.EntityFramework;
 using AutoCount.Stock.ItemGroup;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PlugIn_1.Entity.Stock
 {
     internal class ItemGroups
     {
-        private UserSession session;
+        private readonly UserSession session;
+
+        private readonly ItemGroupCommand cmd;
 
         public ItemGroups(UserSession userSession)
         {
-            userSession = session;
+            session = userSession;
+
+            cmd = ItemGroupCommand.Create(session, session.DBSetting);
         }
 
         internal string CreateOrUpdate_ItemGroup(bool isOverwrite, string item_group, string desc = "")
         {
-            ItemGroupCommand cmd = ItemGroupCommand.Create(session, session.DBSetting);
-
-            ItemGroupEntity itemGroup = isOverwrite ?
+            ItemGroupEntity itemGroup = isOverwrite && hasItemGroup(item_group) ?
                 cmd.GetItemGroup(item_group) : cmd.NewItemGroup();
 
             itemGroup.ItemGroup = item_group;
@@ -36,8 +32,6 @@ namespace PlugIn_1.Entity.Stock
 
         public bool hasItemGroup(string item_group)
         {
-            ItemGroupCommand cmd = ItemGroupCommand.Create(session, session.DBSetting);
-
             return cmd.GetItemGroup(item_group) != null;
         }
     }
