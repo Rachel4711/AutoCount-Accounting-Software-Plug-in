@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(UBSDataMigrateForm));
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle5 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
             this.label_Debtor_Title = new System.Windows.Forms.Label();
             this.txt_path_AccFolder = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
@@ -108,6 +108,7 @@
             // 
             // btn_browseStkFolder
             // 
+            this.btn_browseStkFolder.AutoSize = true;
             this.btn_browseStkFolder.Enabled = false;
             this.btn_browseStkFolder.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btn_browseStkFolder.Image = ((System.Drawing.Image)(resources.GetObject("btn_browseStkFolder.Image")));
@@ -151,6 +152,7 @@
             // 
             // btn_browseAccFolder
             // 
+            this.btn_browseAccFolder.AutoSize = true;
             this.btn_browseAccFolder.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btn_browseAccFolder.Image = ((System.Drawing.Image)(resources.GetObject("btn_browseAccFolder.Image")));
             this.btn_browseAccFolder.Location = new System.Drawing.Point(229, 90);
@@ -162,6 +164,7 @@
             // 
             // btn_folderHelp
             // 
+            this.btn_folderHelp.AutoSize = true;
             this.btn_folderHelp.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.btn_folderHelp.FlatAppearance.BorderColor = System.Drawing.Color.White;
             this.btn_folderHelp.FlatAppearance.BorderSize = 5;
@@ -177,6 +180,7 @@
             // 
             // btn_listTable
             // 
+            this.btn_listTable.AutoSize = true;
             this.btn_listTable.Enabled = false;
             this.btn_listTable.Font = new System.Drawing.Font("Microsoft YaHei UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btn_listTable.Location = new System.Drawing.Point(15, 195);
@@ -246,8 +250,8 @@
             this.dgv_selTblImport.Name = "dgv_selTblImport";
             this.dgv_selTblImport.RowHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.None;
             this.dgv_selTblImport.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.AutoSizeToDisplayedHeaders;
-            dataGridViewCellStyle5.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
-            this.dgv_selTblImport.RowsDefaultCellStyle = dataGridViewCellStyle5;
+            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
+            this.dgv_selTblImport.RowsDefaultCellStyle = dataGridViewCellStyle2;
             this.dgv_selTblImport.ShowEditingIcon = false;
             this.dgv_selTblImport.Size = new System.Drawing.Size(589, 184);
             this.dgv_selTblImport.TabIndex = 45;
@@ -259,6 +263,7 @@
             // 
             // btn_import
             // 
+            this.btn_import.AutoSize = true;
             this.btn_import.Font = new System.Drawing.Font("Microsoft YaHei UI", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btn_import.Location = new System.Drawing.Point(16, 258);
             this.btn_import.Name = "btn_import";
@@ -270,8 +275,9 @@
             // 
             // button_exit
             // 
+            this.button_exit.AutoSize = true;
             this.button_exit.Font = new System.Drawing.Font("Microsoft YaHei UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.button_exit.Location = new System.Drawing.Point(628, 699);
+            this.button_exit.Location = new System.Drawing.Point(18, 694);
             this.button_exit.Name = "button_exit";
             this.button_exit.Size = new System.Drawing.Size(160, 29);
             this.button_exit.TabIndex = 49;
@@ -307,7 +313,7 @@
             this.txt_currentRecNo.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.txt_currentRecNo.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.txt_currentRecNo.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.txt_currentRecNo.Location = new System.Drawing.Point(126, 530);
+            this.txt_currentRecNo.Location = new System.Drawing.Point(128, 318);
             this.txt_currentRecNo.Name = "txt_currentRecNo";
             this.txt_currentRecNo.ReadOnly = true;
             this.txt_currentRecNo.Size = new System.Drawing.Size(51, 15);
@@ -315,8 +321,9 @@
             // 
             // btn_copyImportStus
             // 
+            this.btn_copyImportStus.AutoSize = true;
             this.btn_copyImportStus.Font = new System.Drawing.Font("Microsoft YaHei UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btn_copyImportStus.Location = new System.Drawing.Point(17, 550);
+            this.btn_copyImportStus.Location = new System.Drawing.Point(628, 544);
             this.btn_copyImportStus.Name = "btn_copyImportStus";
             this.btn_copyImportStus.Size = new System.Drawing.Size(160, 29);
             this.btn_copyImportStus.TabIndex = 54;
@@ -330,7 +337,7 @@
             this.label12.AutoSize = true;
             this.label12.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label12.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
-            this.label12.Location = new System.Drawing.Point(14, 315);
+            this.label12.Location = new System.Drawing.Point(663, 315);
             this.label12.Name = "label12";
             this.label12.Size = new System.Drawing.Size(125, 18);
             this.label12.TabIndex = 55;
@@ -341,7 +348,7 @@
             this.label5.AutoSize = true;
             this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label5.ForeColor = System.Drawing.SystemColors.WindowFrame;
-            this.label5.Location = new System.Drawing.Point(15, 529);
+            this.label5.Location = new System.Drawing.Point(17, 317);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(105, 16);
             this.label5.TabIndex = 56;
@@ -349,6 +356,7 @@
             // 
             // gb_dataMigrate
             // 
+            this.gb_dataMigrate.AutoSize = true;
             this.gb_dataMigrate.BackColor = System.Drawing.SystemColors.Control;
             this.gb_dataMigrate.Controls.Add(this.idc_warning);
             this.gb_dataMigrate.Controls.Add(this.chk_overwriteExistData);
@@ -372,7 +380,7 @@
             this.gb_dataMigrate.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.gb_dataMigrate.Location = new System.Drawing.Point(0, 150);
             this.gb_dataMigrate.Name = "gb_dataMigrate";
-            this.gb_dataMigrate.Size = new System.Drawing.Size(803, 592);
+            this.gb_dataMigrate.Size = new System.Drawing.Size(803, 598);
             this.gb_dataMigrate.TabIndex = 57;
             this.gb_dataMigrate.TabStop = false;
             this.gb_dataMigrate.MouseCaptureChanged += new System.EventHandler(this.btn_copyImportStus_Leave);
@@ -397,7 +405,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chk_overwriteExistData.AutoSize = true;
             this.chk_overwriteExistData.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
-            this.chk_overwriteExistData.Location = new System.Drawing.Point(240, 267);
+            this.chk_overwriteExistData.Location = new System.Drawing.Point(237, 267);
             this.chk_overwriteExistData.MaximumSize = new System.Drawing.Size(15, 15);
             this.chk_overwriteExistData.Name = "chk_overwriteExistData";
             this.chk_overwriteExistData.Padding = new System.Windows.Forms.Padding(1);
@@ -408,10 +416,11 @@
             // 
             // btn_resetAllRange
             // 
+            this.btn_resetAllRange.AutoSize = true;
             this.btn_resetAllRange.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btn_resetAllRange.Location = new System.Drawing.Point(16, 193);
             this.btn_resetAllRange.Name = "btn_resetAllRange";
-            this.btn_resetAllRange.Size = new System.Drawing.Size(87, 24);
+            this.btn_resetAllRange.Size = new System.Drawing.Size(87, 26);
             this.btn_resetAllRange.TabIndex = 62;
             this.btn_resetAllRange.Text = "Reset All";
             this.btn_resetAllRange.UseVisualStyleBackColor = true;
@@ -424,7 +433,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chk_reformatAccNo.AutoSize = true;
             this.chk_reformatAccNo.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
-            this.chk_reformatAccNo.Location = new System.Drawing.Point(240, 240);
+            this.chk_reformatAccNo.Location = new System.Drawing.Point(237, 240);
             this.chk_reformatAccNo.MaximumSize = new System.Drawing.Size(15, 15);
             this.chk_reformatAccNo.Name = "chk_reformatAccNo";
             this.chk_reformatAccNo.Padding = new System.Windows.Forms.Padding(1);
@@ -437,7 +446,7 @@
             // 
             this.label9.AutoSize = true;
             this.label9.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label9.Location = new System.Drawing.Point(259, 240);
+            this.label9.Location = new System.Drawing.Point(256, 240);
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(484, 16);
             this.label9.TabIndex = 64;
@@ -447,7 +456,7 @@
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(259, 267);
+            this.label2.Location = new System.Drawing.Point(256, 267);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(356, 16);
             this.label2.TabIndex = 63;
@@ -457,7 +466,7 @@
             // 
             this.lb_copied.AutoSize = true;
             this.lb_copied.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.lb_copied.Location = new System.Drawing.Point(183, 559);
+            this.lb_copied.Location = new System.Drawing.Point(504, 553);
             this.lb_copied.Name = "lb_copied";
             this.lb_copied.Size = new System.Drawing.Size(118, 13);
             this.lb_copied.TabIndex = 57;
@@ -467,6 +476,7 @@
             // 
             // btn_rangeHelp
             // 
+            this.btn_rangeHelp.AutoSize = true;
             this.btn_rangeHelp.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.btn_rangeHelp.FlatAppearance.BorderColor = System.Drawing.Color.White;
             this.btn_rangeHelp.FlatAppearance.BorderSize = 5;
@@ -474,7 +484,7 @@
             this.btn_rangeHelp.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
             this.btn_rangeHelp.Location = new System.Drawing.Point(126, 93);
             this.btn_rangeHelp.Name = "btn_rangeHelp";
-            this.btn_rangeHelp.Size = new System.Drawing.Size(37, 21);
+            this.btn_rangeHelp.Size = new System.Drawing.Size(39, 23);
             this.btn_rangeHelp.TabIndex = 58;
             this.btn_rangeHelp.Text = "Help";
             this.btn_rangeHelp.UseVisualStyleBackColor = false;
@@ -482,6 +492,7 @@
             // 
             // gb_recRangeSet
             // 
+            this.gb_recRangeSet.AutoSize = true;
             this.gb_recRangeSet.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.gb_recRangeSet.Controls.Add(this.label11);
             this.gb_recRangeSet.Controls.Add(this.label10);
@@ -494,7 +505,7 @@
             this.gb_recRangeSet.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.gb_recRangeSet.Location = new System.Drawing.Point(6, 114);
             this.gb_recRangeSet.Name = "gb_recRangeSet";
-            this.gb_recRangeSet.Size = new System.Drawing.Size(187, 115);
+            this.gb_recRangeSet.Size = new System.Drawing.Size(187, 122);
             this.gb_recRangeSet.TabIndex = 65;
             this.gb_recRangeSet.TabStop = false;
             // 

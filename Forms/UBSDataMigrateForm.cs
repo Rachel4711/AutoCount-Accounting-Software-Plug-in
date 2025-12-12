@@ -117,8 +117,9 @@ namespace PlugIn_1.Forms
 
             isPathChanging = txt_path_AccFolder.Text.Equals("") ? false : true; // Indicate path changes if not left empty
 
-            txt_path_AccFolder.BackColor = SystemColors.Window;
+            txt_path_AccFolder.BackColor = SystemColors.Window; // Reset text field backcolor
 
+            // Indicate warning when the folder path changed
             if (dgv_selTblImport.RowCount > 0)
             {
                 btn_import.BackColor = idc_warning.BackColor = Color.NavajoWhite;
@@ -130,8 +131,9 @@ namespace PlugIn_1.Forms
         {
             isPathChanging = true; // Indicate path changes
 
-            txt_path_StkFolder.BackColor = SystemColors.Window;
+            txt_path_StkFolder.BackColor = SystemColors.Window; // Reset text field backcolor
 
+            // Indicate warning when the folder path changed
             if (dgv_selTblImport.RowCount > 0)
             {
                 btn_import.BackColor = idc_warning.BackColor = Color.NavajoWhite;
@@ -283,6 +285,7 @@ namespace PlugIn_1.Forms
                     "Incorrect Backup Folder",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
 
+                // Indicate red on where invalid folder path is provided
                 txt_path_AccFolder.BackColor = !isValidAccFolder ? Color.LightCoral : SystemColors.Window;
                 txt_path_StkFolder.BackColor = !isValidStkFolder ? Color.LightCoral : SystemColors.Window;
 
@@ -295,8 +298,6 @@ namespace PlugIn_1.Forms
                 // Reset the titles
                 Text = $"Migrate UBS Account ({db_name})";
                 lbl_ImportTitle.Text = "Select and Import Table";
-
-                rtxt_importStusLog.Text = "";   // Reset import status log
 
                 gb_recRangeSet.Enabled = false; // Reset disabled record range setting
 
@@ -405,7 +406,7 @@ namespace PlugIn_1.Forms
             foreach (DataRow row in dataTable_show.Rows)
             {
                 // Add to import_table_rows dictionary if is selected rows or has master row selected
-                if ((bool)row["Select"]) // || isMasterSelected
+                if ((bool)row["Select"] || isMasterSelected)
                 {
                     import_table_rows.Add(
                         row["Table Name"].ToString(),                      // Table name as the KEY
@@ -421,7 +422,7 @@ namespace PlugIn_1.Forms
             }
 
             // Add to import_table_rows dictionary if has master row selected
-            if (dataTable_back.Rows.Count > 0) // && isMasterSelected
+            if (dataTable_back.Rows.Count > 0 && isMasterSelected)
             {
                 foreach (DataRow row in dataTable_back.Rows)
                 {
@@ -447,7 +448,7 @@ namespace PlugIn_1.Forms
                 {
                     DialogResult rslt = MessageBox.Show(
                         "The given folder path(s) has changed, please reload the tables before import.\n" +
-                        "Continue with current import tables?",
+                        "Continue with current loaded import tables?",
                         "Folder Path Changed",
                         MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
@@ -500,6 +501,8 @@ namespace PlugIn_1.Forms
                     settings = "\n\u274C NONE";
                 }
 
+                // ----- Display confirmation prompt ----- //
+
                 DialogResult result = MessageBox.Show(
                     $"Please check the information below before proceed:\n\n" +
                     $"Table to import :\n\n" +
@@ -510,7 +513,9 @@ namespace PlugIn_1.Forms
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
 
                 if (result.ToString().Equals("No")) return;
-                
+
+                rtxt_importStusLog.Text = "";   // Reset import status log
+
                 exception = successes = null;   // Reset exception and success message text
 
                 // ----- Show messages based on the chosen options ----- //
@@ -1133,7 +1138,11 @@ namespace PlugIn_1.Forms
 
         private bool ValidateFolders(string file_path, string file_name)
         {
-            return new FileInfo($"{file_path}\\{file_name}.MEM").Exists; // Check if file exist
+            // Check if file exist
+            try
+            { return new FileInfo($"{file_path}\\{file_name}.MEM").Exists; }
+            catch (Exception)
+            { return false; }
         }
 
         private void SetRecordRange(string column, NumericUpDown nud)

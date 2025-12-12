@@ -294,12 +294,16 @@ namespace PlugIn_1.Entity.Accounts
 
         internal bool isDebtorAcc(string acc_no)
         {
-            return Regex.Match(acc_no, @"^$").Success;
+            // Match "3000.." and "3001.." but not match those are not "/000" and "-0000" and "-A201"
+            return Regex.Match(acc_no, @"^300([0-1]|-[A-z]*[0-1])").Success && 
+                !Regex.Match(acc_no, @"^300([0-1]/000|-([0-1]000|[A-z]*[2-9][0-9]*))$").Success;
         }
 
         internal bool isCreditorAcc(string acc_no)
         {
-            return Regex.Match(acc_no, @"^$").Success;
+            // Match "4000.." and "4001.." but not match those are not "/000" or "-0000" and "-A201"
+            return Regex.Match(acc_no, @"^400(0|-[A-z]*[0-1])").Success &&
+                !Regex.Match(acc_no, @"^400(0/000|-(0000|[A-z]*[1-9][0-9]*))$").Success;
         }
     }
 
