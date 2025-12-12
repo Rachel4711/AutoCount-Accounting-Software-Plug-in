@@ -6,6 +6,7 @@ using AutoCount.RegistryID;
 using PlugIn_1.Entity.General_Maintainance;
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace PlugIn_1.Entity
 {
@@ -55,7 +56,8 @@ namespace PlugIn_1.Entity
 
         private string getCreditorCtrlAcc()
         {
-            return accountHelper.GetCreditorControlAccounts().First();
+            return accountHelper.GetCreditorControlAccounts().Find(
+                ac => Regex.Match(ac, @"^400(0/|-0)000$").Success);
         }
 
         private string setArea(string cust_area)

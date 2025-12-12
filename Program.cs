@@ -1,19 +1,16 @@
 ﻿using AutoCount.Authentication;
 using PlugIn_1.Forms;
 using System;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace PlugIn_1
 {
     static class Program
     {
-        /// <summary>
-        /// The main entry point for the application.
-        /// </summary>
-        /// 
-
         public static UserSession session { get; set; }
         public static Form main_form { get; set; }
+        public static Form pro_form { get; set; }
         public static bool appHasLoaded { get; set; }
 
         [STAThread]
@@ -35,5 +32,16 @@ namespace PlugIn_1
                 }
             } while (Form.ActiveForm != null);
         }
+    }
+
+    static class WindowActivator
+    {
+        [DllImport("user32.dll")]
+        internal static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        [DllImport("user32.dll")]
+        internal static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        internal const int SW_RESTORE = 9; // Restores a minimized window
     }
 }

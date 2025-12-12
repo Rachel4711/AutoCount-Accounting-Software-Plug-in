@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(UBSDataMigrateForm));
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle5 = new System.Windows.Forms.DataGridViewCellStyle();
             this.label_Debtor_Title = new System.Windows.Forms.Label();
             this.txt_path_AccFolder = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
@@ -209,7 +209,7 @@
             // 
             // nud_recRangeStart
             // 
-            this.nud_recRangeStart.Location = new System.Drawing.Point(103, 39);
+            this.nud_recRangeStart.Location = new System.Drawing.Point(103, 46);
             this.nud_recRangeStart.Name = "nud_recRangeStart";
             this.nud_recRangeStart.Size = new System.Drawing.Size(69, 20);
             this.nud_recRangeStart.TabIndex = 41;
@@ -221,7 +221,7 @@
             this.label8.AutoSize = true;
             this.label8.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label8.ForeColor = System.Drawing.SystemColors.WindowFrame;
-            this.label8.Location = new System.Drawing.Point(9, 15);
+            this.label8.Location = new System.Drawing.Point(9, 20);
             this.label8.Name = "label8";
             this.label8.Size = new System.Drawing.Size(56, 16);
             this.label8.TabIndex = 43;
@@ -246,8 +246,8 @@
             this.dgv_selTblImport.Name = "dgv_selTblImport";
             this.dgv_selTblImport.RowHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.None;
             this.dgv_selTblImport.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.AutoSizeToDisplayedHeaders;
-            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
-            this.dgv_selTblImport.RowsDefaultCellStyle = dataGridViewCellStyle1;
+            dataGridViewCellStyle5.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
+            this.dgv_selTblImport.RowsDefaultCellStyle = dataGridViewCellStyle5;
             this.dgv_selTblImport.ShowEditingIcon = false;
             this.dgv_selTblImport.Size = new System.Drawing.Size(589, 184);
             this.dgv_selTblImport.TabIndex = 45;
@@ -260,7 +260,7 @@
             // btn_import
             // 
             this.btn_import.Font = new System.Drawing.Font("Microsoft YaHei UI", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btn_import.Location = new System.Drawing.Point(626, 267);
+            this.btn_import.Location = new System.Drawing.Point(16, 258);
             this.btn_import.Name = "btn_import";
             this.btn_import.Size = new System.Drawing.Size(162, 29);
             this.btn_import.TabIndex = 48;
@@ -281,7 +281,7 @@
             // 
             // nud_recRangeEnd
             // 
-            this.nud_recRangeEnd.Location = new System.Drawing.Point(103, 13);
+            this.nud_recRangeEnd.Location = new System.Drawing.Point(103, 18);
             this.nud_recRangeEnd.Name = "nud_recRangeEnd";
             this.nud_recRangeEnd.Size = new System.Drawing.Size(69, 20);
             this.nud_recRangeEnd.TabIndex = 50;
@@ -380,12 +380,15 @@
             // idc_warning
             // 
             this.idc_warning.AutoSize = true;
-            this.idc_warning.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.idc_warning.Location = new System.Drawing.Point(605, 274);
+            this.idc_warning.BackColor = System.Drawing.SystemColors.Control;
+            this.idc_warning.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.idc_warning.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.5F);
+            this.idc_warning.Location = new System.Drawing.Point(54, 265);
             this.idc_warning.Name = "idc_warning";
-            this.idc_warning.Size = new System.Drawing.Size(0, 16);
+            this.idc_warning.Size = new System.Drawing.Size(0, 15);
             this.idc_warning.TabIndex = 66;
             this.idc_warning.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.idc_warning.Click += new System.EventHandler(this.btn_import_Click);
             // 
             // chk_overwriteExistData
             // 
@@ -394,7 +397,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chk_overwriteExistData.AutoSize = true;
             this.chk_overwriteExistData.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
-            this.chk_overwriteExistData.Location = new System.Drawing.Point(15, 273);
+            this.chk_overwriteExistData.Location = new System.Drawing.Point(240, 267);
             this.chk_overwriteExistData.MaximumSize = new System.Drawing.Size(15, 15);
             this.chk_overwriteExistData.Name = "chk_overwriteExistData";
             this.chk_overwriteExistData.Padding = new System.Windows.Forms.Padding(1);
@@ -406,7 +409,7 @@
             // btn_resetAllRange
             // 
             this.btn_resetAllRange.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btn_resetAllRange.Location = new System.Drawing.Point(16, 179);
+            this.btn_resetAllRange.Location = new System.Drawing.Point(16, 193);
             this.btn_resetAllRange.Name = "btn_resetAllRange";
             this.btn_resetAllRange.Size = new System.Drawing.Size(87, 24);
             this.btn_resetAllRange.TabIndex = 62;
@@ -421,7 +424,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.chk_reformatAccNo.AutoSize = true;
             this.chk_reformatAccNo.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F);
-            this.chk_reformatAccNo.Location = new System.Drawing.Point(15, 246);
+            this.chk_reformatAccNo.Location = new System.Drawing.Point(240, 240);
             this.chk_reformatAccNo.MaximumSize = new System.Drawing.Size(15, 15);
             this.chk_reformatAccNo.Name = "chk_reformatAccNo";
             this.chk_reformatAccNo.Padding = new System.Windows.Forms.Padding(1);
@@ -434,7 +437,7 @@
             // 
             this.label9.AutoSize = true;
             this.label9.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label9.Location = new System.Drawing.Point(34, 245);
+            this.label9.Location = new System.Drawing.Point(259, 240);
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(484, 16);
             this.label9.TabIndex = 64;
@@ -444,7 +447,7 @@
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(34, 272);
+            this.label2.Location = new System.Drawing.Point(259, 267);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(356, 16);
             this.label2.TabIndex = 63;
@@ -491,7 +494,7 @@
             this.gb_recRangeSet.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.gb_recRangeSet.Location = new System.Drawing.Point(6, 114);
             this.gb_recRangeSet.Name = "gb_recRangeSet";
-            this.gb_recRangeSet.Size = new System.Drawing.Size(187, 96);
+            this.gb_recRangeSet.Size = new System.Drawing.Size(187, 115);
             this.gb_recRangeSet.TabIndex = 65;
             this.gb_recRangeSet.TabStop = false;
             // 
@@ -500,7 +503,7 @@
             this.label11.AutoSize = true;
             this.label11.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label11.ForeColor = System.Drawing.SystemColors.WindowFrame;
-            this.label11.Location = new System.Drawing.Point(73, 41);
+            this.label11.Location = new System.Drawing.Point(73, 48);
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(28, 16);
             this.label11.TabIndex = 61;
@@ -511,7 +514,7 @@
             this.label10.AutoSize = true;
             this.label10.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label10.ForeColor = System.Drawing.SystemColors.WindowFrame;
-            this.label10.Location = new System.Drawing.Point(73, 15);
+            this.label10.Location = new System.Drawing.Point(73, 20);
             this.label10.Name = "label10";
             this.label10.Size = new System.Drawing.Size(28, 16);
             this.label10.TabIndex = 60;
@@ -520,7 +523,7 @@
             // btn_resetRange
             // 
             this.btn_resetRange.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btn_resetRange.Location = new System.Drawing.Point(103, 65);
+            this.btn_resetRange.Location = new System.Drawing.Point(103, 79);
             this.btn_resetRange.Name = "btn_resetRange";
             this.btn_resetRange.Size = new System.Drawing.Size(69, 24);
             this.btn_resetRange.TabIndex = 58;
@@ -533,7 +536,7 @@
             this.label6.AutoSize = true;
             this.label6.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label6.ForeColor = System.Drawing.SystemColors.WindowFrame;
-            this.label6.Location = new System.Drawing.Point(9, 41);
+            this.label6.Location = new System.Drawing.Point(9, 48);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(63, 16);
             this.label6.TabIndex = 59;

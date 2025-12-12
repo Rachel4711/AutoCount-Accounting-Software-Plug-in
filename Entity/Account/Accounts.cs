@@ -4,6 +4,7 @@ using AutoCount.GL.AccountMaintenance;
 using AutoCount.RegistryID;
 using PlugIn_1.Entity.General_Maintainance;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace PlugIn_1.Entity.Accounts
@@ -117,7 +118,7 @@ namespace PlugIn_1.Entity.Accounts
 
             {"BKPV", SpecialAccType.Bank},
             {"PVCA", SpecialAccType.Cash},
-            {"BKPVCA", SpecialAccType.Others}
+            {"BKPVCA", SpecialAccType.Bank}
         };
 
         public Accounts(UserSession userSession) 
@@ -127,41 +128,101 @@ namespace PlugIn_1.Entity.Accounts
             cmd = AccountCommand.Create(session, session.DBSetting);
         }
 
-        public void CreateNormalAccount(bool isOverwrite, string acc_no, DbfDataReader.DbfDataReader dbfDataReader)
+        public void CreateNormalAccount(bool isOverwrite, string acc_no, AccountModel accountModel)
         {
-            if (isDebtorOrCreditor(acc_no)) return;
-            
             Account account = isOverwrite && hasAccount(acc_no) ? 
                 cmd.GetAccount(acc_no) : cmd.NewAccount();
 
             account.AccNo            = acc_no;
-            account.ParentAccNo      = setParentAccNo(acc_no);
-            account.Description      = dbfDataReader.GetString(3);
-            account.Desc2            = dbfDataReader.GetString(4);
-            account.AccType          = setAccType(dbfDataReader.GetString(5), dbfDataReader.GetString(8));
+            account.AccType          = setAccType(accountModel.acc_type, accountModel.spAcc_type);
+            account.ParentAccNo      = setParentAccNo(acc_no, account.AccType);
+            account.Description      = accountModel.desc;
+            account.Desc2            = accountModel.desc2;
 
             account.SpecialAccType   = 
                 setSpecialAccType(
                     account, 
-                    dbfDataReader.GetString(8)
+                    accountModel.spAcc_type
                 );
 
-            account.CurrencyCode     = setCurrency(session.DBSetting, dbfDataReader.GetString(9));
+            account.CurrencyCode     = setCurrency(session.DBSetting, accountModel.currency_code);
             account.CashFlowCategory = 0;
 
             cmd.SaveAccount(session.DBSetting, account);
         }
 
-        private string setParentAccNo(string acc_no)
+        private string setParentAccNo(string acc_no, string acc_type)
         {
+            string pan1, pan2 = "";
+
             char spliter = acc_no.Contains("/") ? '/' : '-';
-            
-            string acc_no_front = acc_no.Split(spliter)[0];
-            string acc_no_back  = spliter == '/' ? "000" : "0000";
 
-            string head_acc_no = $"{acc_no_front}{spliter}{acc_no_back}"; // AAAA/000 or AAA-0000
+            string[] parts = acc_no.Split(spliter);
+            string front = parts[0];
+            string back = parts[1];
 
-            return hasAccount(head_acc_no) ? head_acc_no : null;
+            if (!Regex.Match(acc_no, @"(000/|00-0)000$").Success)
+            {
+                if (!Regex.Match(front, @"^(8|9).*").Success)
+                {
+                    pan1 = spliter == '/' ?
+                    $"{front.Substring(0, 3)}0/000" : // {???}0/000 or
+                    $"{front.Substring(0, 3)}-0000";  // {???}-0000
+
+                    //----------------------------------------------------//
+
+                    if (spliter == '/')
+                    {
+                        pan2 = $"{front.Substring(0, 4)}/000"; // {????}/000
+                    }
+                    else
+                    {
+                        string alpha = new string(back.Where(a => char.IsLetter(a)).ToArray());
+                        string digit = new string(back.Where(d => char.IsDigit(d)).ToArray());
+
+                        if (alpha.Length == 0)
+                        {
+                            // {???}-{?}000
+                            pan2 = $"{front.Substring(0, 3)}-{back.First()}000";
+                        }
+                        else
+                        {
+                            // Instead of {???}-{A}?00 , change to {???}-{?}000
+                            pan2 = $"{front.Substring(0, 3)}-{digit.First()}000";
+                        }
+                    }
+                }
+                else
+                {
+                    if (spliter == '/')
+                    {
+                        pan1 = $"{front.Substring(0, 4)}/000"; // {????}/000
+                    }
+                    else
+                    {
+                        string alpha = new string(back.Where(a => char.IsLetter(a)).ToArray());
+                        string digit = new string(back.Where(d => char.IsDigit(d)).ToArray());
+
+                        if (alpha.Length == 0)
+                        {
+                            // {???}-{?}000
+                            pan1 = $"{front.Substring(0, 3)}-{back.First()}000";
+                        }
+                        else
+                        {
+                            // Instead of {???}-{A}?00 , change to {???}-{?}000
+                            pan1 = $"{front.Substring(0, 3)}-{digit.First()}000";
+                        }
+                    }
+                }
+
+                if (hasAccount(pan2, acc_type))
+                    return pan2;
+                else if (hasAccount(pan1, acc_type))
+                    return pan1;
+            }
+
+            return null;
         }
 
         private string setAccType(string acc_type, string spAcc_type)
@@ -180,14 +241,9 @@ namespace PlugIn_1.Entity.Accounts
             string desc = account.Description.ToString();
             
             // If is items under "Fixed Assets" (Based on acc. no.)
-            if (Regex.Match(acc_no, @"^2[0-9]{2}([0-9]/|-[0-9])[0-9]{3}$").Success)
+            if (Regex.Match(acc_no, @"^(2|3)0[1-9](0/|-0)000$").Success && desc.ToUpper().Contains("DEPOSIT"))
             {
-                bool isFixedAssets = !Regex.Match(acc_no, @"^200(0/|-0)000$").Success &&
-                    spAcc_type != "AD" && acc_type == acc_type_map["D"];
-
-                return isFixedAssets ?                                              // If is fixed asset accounts
-                    SpecialAccType.FixedAsset : spAcc_type == "AD" ?                // If is acuml. dprec. accounts
-                    SpecialAccType.AccumulatedDepreciation : SpecialAccType.Normal; // For "Fixed Assets" account
+                return SpecialAccType.Deposit;
             }
             // If is a Debtor or Creditor control account (Based on acc. no.)
             else if (Regex.Match(acc_no, @"^(3|4)00(0/|-0)000$").Success)
@@ -197,10 +253,15 @@ namespace PlugIn_1.Entity.Accounts
 
                 return isDebtorCtrl ? SpecialAccType.DebtorControl : SpecialAccType.CreditorControl;
             }
-            // If is a deposit account (No fix account number, like 30X0/000)
-            else if (Regex.Match(acc_no, @"^30[1-9](0/|-0)000$").Success && desc.ToUpper().Contains("DEPOSIT"))
+            // If is a deposit account (No fix account number)
+            else if (Regex.Match(acc_no, @"^2[0-9]{2}([0-9]/|-[0-9])[0-9]{3}$").Success)
             {
-                return SpecialAccType.Deposit;
+                bool isFixedAssets = !Regex.Match(acc_no, @"^200(0/|-0)000$").Success &&
+                    spAcc_type != "AD" && acc_type == acc_type_map["D"];
+
+                return isFixedAssets ?                                              // If is fixed asset accounts
+                    SpecialAccType.FixedAsset : spAcc_type == "AD" ?                // If is acuml. dprec. accounts
+                    SpecialAccType.AccumulatedDepreciation : SpecialAccType.Normal; // For "Fixed Assets" account
             }
             // Else other than above cases
             else
@@ -219,19 +280,36 @@ namespace PlugIn_1.Entity.Accounts
                     currencies.CreateOrUpdate_Currency(false, currency_code);
         }
 
-        public bool hasAccount(string acc_no)
+        internal bool hasAccount(string acc_no)
         {
             return cmd.GetAccount(acc_no) != null;
         }
 
-        private bool isDebtorOrCreditor(string acc_no)
+        internal bool hasAccount(string acc_no, string acc_type)
         {
-            return Regex.Match(acc_no, @"^(3|4)00((0/[A-z][0-9]{2})|(-[A-z][0-9]{3}))").Success;
+            Account account = cmd.GetAccount(acc_no);
+
+            return account != null && account.AccType == acc_type;
         }
 
-        public void DeleteAccount(string acc_no)
+        internal bool isDebtorAcc(string acc_no)
         {
-            if (!isDebtorOrCreditor(acc_no)) cmd.DeleteAccount(acc_no);
+            return Regex.Match(acc_no, @"^$").Success;
         }
+
+        internal bool isCreditorAcc(string acc_no)
+        {
+            return Regex.Match(acc_no, @"^$").Success;
+        }
+    }
+
+    internal class AccountModel
+    {
+        internal string acc_no { get; set; }
+        internal string desc { get; set; }
+        internal string desc2 { get; set; }
+        internal string acc_type { get; set; }
+        internal string spAcc_type { get; set; }
+        internal string currency_code { get; set; }
     }
 }

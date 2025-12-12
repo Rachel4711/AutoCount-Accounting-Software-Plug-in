@@ -6,6 +6,7 @@ using System.Linq;
 using AutoCount.Data;
 using PlugIn_1.Entity.General_Maintainance;
 using AutoCount.RegistryID;
+using System.Text.RegularExpressions;
 
 namespace PlugIn_1.Entity
 {
@@ -14,11 +15,13 @@ namespace PlugIn_1.Entity
         private readonly UserSession session;
 
         private DebtorDataAccess access;
+        private AccountHelper accountHelper;
 
         internal Debtor(UserSession userSession)
         {
             session = userSession;
 
+            accountHelper = AccountHelper.Create(session.DBSetting);
             access = DebtorDataAccess.Create(session, session.DBSetting);
         }
 
@@ -57,9 +60,8 @@ namespace PlugIn_1.Entity
 
         private string getDebtorCtrlAcc()
         {
-            AccountHelper accountHelper = AccountHelper.Create(session.DBSetting);
-
-            return accountHelper.GetDebtorControlAccounts().First();
+            return accountHelper.GetDebtorControlAccounts().Find(
+                ac => Regex.Match(ac, @"^300(0/|-0)000$").Success);
         }
 
         private string setArea(string cust_area)

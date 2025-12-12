@@ -121,7 +121,7 @@ namespace PlugIn_1.Forms
 
             if (dgv_selTblImport.RowCount > 0)
             {
-                btn_import.BackColor = Color.NavajoWhite;
+                btn_import.BackColor = idc_warning.BackColor = Color.NavajoWhite;
                 idc_warning.Text = "\u26A0";
             }
         }
@@ -134,7 +134,7 @@ namespace PlugIn_1.Forms
 
             if (dgv_selTblImport.RowCount > 0)
             {
-                btn_import.BackColor = Color.NavajoWhite;
+                btn_import.BackColor = idc_warning.BackColor = Color.NavajoWhite;
                 idc_warning.Text = "\u26A0";
             }
         }
@@ -254,6 +254,9 @@ namespace PlugIn_1.Forms
 
             nud_recRangeStart.Value = nud_recRangeEnd.Value = 0; // Reset value of range setting controls
 
+            // Reset these options to unchecked
+            chk_reformatAccNo.Checked = chk_overwriteExistData.Checked = false;
+
             isSyncingRange = false; // Close record range sync indication
         }
 
@@ -292,6 +295,8 @@ namespace PlugIn_1.Forms
                 // Reset the titles
                 Text = $"Migrate UBS Account ({db_name})";
                 lbl_ImportTitle.Text = "Select and Import Table";
+
+                rtxt_importStusLog.Text = "";   // Reset import status log
 
                 gb_recRangeSet.Enabled = false; // Reset disabled record range setting
 
@@ -378,7 +383,7 @@ namespace PlugIn_1.Forms
 
                 isPathChanging = false; // Reset folder path change indication
 
-                btn_import.BackColor = Color.White;
+                btn_import.BackColor = idc_warning.BackColor = Color.White;
                 idc_warning.Text = string.Empty;
             }
         }
@@ -400,7 +405,7 @@ namespace PlugIn_1.Forms
             foreach (DataRow row in dataTable_show.Rows)
             {
                 // Add to import_table_rows dictionary if is selected rows or has master row selected
-                if ((bool)row["Select"] || isMasterSelected) // 
+                if ((bool)row["Select"]) // || isMasterSelected
                 {
                     import_table_rows.Add(
                         row["Table Name"].ToString(),                      // Table name as the KEY
@@ -416,7 +421,7 @@ namespace PlugIn_1.Forms
             }
 
             // Add to import_table_rows dictionary if has master row selected
-            if (dataTable_back.Rows.Count > 0 && isMasterSelected) // 
+            if (dataTable_back.Rows.Count > 0) // && isMasterSelected
             {
                 foreach (DataRow row in dataTable_back.Rows)
                 {
@@ -440,12 +445,13 @@ namespace PlugIn_1.Forms
 
                 if (isPathChanging)
                 {
-                    MessageBox.Show(
-                        "The given folder path(s) has changed, please reload the tables before import.",
+                    DialogResult rslt = MessageBox.Show(
+                        "The given folder path(s) has changed, please reload the tables before import.\n" +
+                        "Continue with current import tables?",
                         "Folder Path Changed",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
-                    return;
+                    if (rslt.ToString().Equals("No")) return;
                 }
 
                 // ----- Display import table list ----- //
@@ -501,12 +507,11 @@ namespace PlugIn_1.Forms
                     $"Data import settings :\n{settings}\n\n" +
                     $"Confirm to start data migration?",
                     "Confirm Data Migration Action",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
 
                 if (result.ToString().Equals("No")) return;
                 
                 exception = successes = null;   // Reset exception and success message text
-                rtxt_importStusLog.Text = "";   // Reset import status log
 
                 // ----- Show messages based on the chosen options ----- //
 
@@ -521,11 +526,10 @@ namespace PlugIn_1.Forms
                     $"\u25B6 Stock source : {txt_path_StkFolder.Text}\n" : "";
 
                 rtxt_importStusLog.AppendText(
-                    $"\n " +
-                    $"\u24D8 {Text}\n" +
-                    $"\u25B6 Account source : {txt_path_AccFolder.Text}\n" +
-                    $"{stock_source}" +
-                    $"\n\u25B6 Operation Start\n");
+                    $"\n \u24D8 {Text}" +
+                    $"\n \u25B6 Account source : {txt_path_AccFolder.Text}" +
+                    $"\n {stock_source}" +
+                    $"\n \u25B6 Operation Start\n");
 
                 // ----- Perform data migration for all selected data tables ----- //
 
@@ -555,7 +559,7 @@ namespace PlugIn_1.Forms
                 int success = successes == null ? 0 : successes.Split('>').Count() - 1,
                     failure = exception == null ? 0 : exception.Split('>').Distinct().Count() - 1; // Dismiss repeative message
 
-                rtxt_importStusLog.AppendText($"\n\n \u24D8 UBS Data Migration Operation Completed ({success} completed, {failure} failure)\n");
+                rtxt_importStusLog.AppendText($"\n\n \u24D8 UBS Data Migration Operation Completed ({success} table completed, {failure} table failed)\n");
                 rtxt_importStusLog.ScrollToCaret();
 
                 // If no exception thrown during the migration process
@@ -625,8 +629,10 @@ namespace PlugIn_1.Forms
                 "Exit from Data Migration",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
 
-                e.Cancel = result.ToString().Equals("No") ? true : false;
+                e.Cancel = result.ToString().Equals("No");
             }
+                
+            Program.pro_form = null;
         }
 
         //UBS Data Migration----------------------------------------------------------------------------------//
@@ -690,64 +696,48 @@ namespace PlugIn_1.Forms
                     $"\n" +
                     $" \u25B6 Start import {table_name} data from record number {start_from_rec} to {end_to_rec}.\n");
 
-                // Iterate through every row in the data file
-                while (dbfData.Read())
+                if (table_name == "Chart of Account") // If is Chart of Account
                 {
-                    current_record++;
+                    // ----- Sort the Chart of Account in ascending order ---- //
+                    
+                    var sorted_dbf = new List<AccountModel>(); // Sorting list for placeholder account model object
 
-                    // If current_record count is in range of start_from_rec and end_to_rec
-                    if ((start_from_rec <= current_record && current_record <= end_to_rec))
+                    rtxt_importStusLog.AppendText($"\n \u25B6 Loading {table_name}");
+                    rtxt_importStusLog.ScrollToCaret();
+
+                    // Create and add account model object to the sorting list
+                    while (dbfData.Read())
                     {
+                        var acc_model = new AccountModel
+                        {
+                            acc_no        = chk_reformatAccNo.Checked ? 
+                            ReformatAccNo(dbfData.GetString(2)) : dbfData.GetString(2),
+
+                            desc          = dbfData.GetString(3),
+                            desc2         = dbfData.GetString(4),
+                            acc_type      = dbfData.GetString(5),
+                            spAcc_type    = dbfData.GetString(8),
+                            currency_code = dbfData.GetString(9),
+                        };
+
+                        sorted_dbf.Add(acc_model);
+                    }
+
+                    rtxt_importStusLog.AppendText($"\n \u25B6 Reordering {table_name}\n");
+                    rtxt_importStusLog.ScrollToCaret();
+
+                    // Sort the list in ascending order by account number
+                    sorted_dbf.Sort((prev, crnt) => prev.acc_no.CompareTo(crnt.acc_no));
+                    
+                    foreach (AccountModel dbfRec in sorted_dbf)
+                    {
+                        current_record++;
+
                         txt_currentRecNo.Text = current_record.ToString(); // Show the current processing record count
 
                         try
                         {
-                            switch (table_name)
-                            {
-                                case "Chart of Account":
-                                    ProcessImport_ChartOfAccount(dbfData, current_record);
-                                    break;
-                                case "Sales Agent":
-                                    ProcessImport_SalesAgent(dbfData, current_record);
-                                    break;
-                                case "Purchase Agent":
-                                    ProcessImport_PurchaseAgent(dbfData, current_record);
-                                    break;
-                                case "Area":
-                                    ProcessImport_Area(dbfData, current_record);
-                                    break;
-                                case "Project":
-                                    ProcessImport_Project(dbfData, current_record);
-                                    break;
-                                case "Currency":
-                                    ProcessImport_Currency(dbfData, current_record);
-                                    break;
-                                case "Customer":
-                                    ProcessImport_Debtor(dbfData, current_record);
-                                    break;
-                                case "Supplier":
-                                    ProcessImport_Creditor(dbfData, current_record);
-                                    break;
-                                case "Category":
-                                    ProcessImport_ItemCategory(dbfData, current_record);
-                                    break;
-                                case "Group":
-                                    ProcessImport_ItemGroup(dbfData, current_record);
-                                    break;
-                                case "Location":
-                                    ProcessImport_ItemLocation(dbfData, current_record);
-                                    break;
-                                case "Item":
-                                    ProcessImport_Item(dbfData, current_record);
-                                    break;
-                                default:
-                                    // If is other table
-                                    exception += 
-                                        $"\n" +
-                                        $"Table: {table_name}\n|" +
-                                        $"- {table_details[0]} is not a backup data table.\n";
-                                    break;
-                            }
+                            ProcessImport_ChartOfAccount(dbfRec, current_record); // Import Chart of Account
                             success++;
                         }
                         catch (Exception ex)
@@ -762,18 +752,103 @@ namespace PlugIn_1.Forms
                             string exc_msg;
 
                             // Set exception message based on either has inner exception message or not
-                            try 
+                            try
                             { exc_msg = $"{ex.InnerException.Message}: {ex.Message}"; }
-                            catch (NullReferenceException) 
+                            catch (NullReferenceException)
                             { exc_msg = ex.Message; }
 
                             // Log the thrown exception
                             rtxt_importStusLog.AppendText($"\n \u274C (Rec {current_record}) {exc_msg}");
                             failure++;
                         }
-                    }
 
-                    rtxt_importStusLog.ScrollToCaret(); // Scroll to the bottom of the status log text box
+                        rtxt_importStusLog.ScrollToCaret(); // Scroll to the bottom of the status log text box
+                    }
+                }
+                else // If is other tables
+                {
+                    // Iterate through every row in the data file
+                    while (dbfData.Read())
+                    {
+                        current_record++;
+
+                        // If current_record count is in range of start_from_rec and end_to_rec
+                        if ((start_from_rec <= current_record && current_record <= end_to_rec))
+                        {
+                            txt_currentRecNo.Text = current_record.ToString(); // Show the current processing record count
+
+                            try
+                            {
+                                switch (table_name)
+                                {
+                                    case "Sales Agent":
+                                        ProcessImport_SalesAgent(dbfData, current_record);
+                                        break;
+                                    case "Purchase Agent":
+                                        ProcessImport_PurchaseAgent(dbfData, current_record);
+                                        break;
+                                    case "Area":
+                                        ProcessImport_Area(dbfData, current_record);
+                                        break;
+                                    case "Project":
+                                        ProcessImport_Project(dbfData, current_record);
+                                        break;
+                                    case "Currency":
+                                        ProcessImport_Currency(dbfData, current_record);
+                                        break;
+                                    case "Customer":
+                                        ProcessImport_Debtor(dbfData, current_record);
+                                        break;
+                                    case "Supplier":
+                                        ProcessImport_Creditor(dbfData, current_record);
+                                        break;
+                                    case "Category":
+                                        ProcessImport_ItemCategory(dbfData, current_record);
+                                        break;
+                                    case "Group":
+                                        ProcessImport_ItemGroup(dbfData, current_record);
+                                        break;
+                                    case "Location":
+                                        ProcessImport_ItemLocation(dbfData, current_record);
+                                        break;
+                                    case "Item":
+                                        ProcessImport_Item(dbfData, current_record);
+                                        break;
+                                    default:
+                                        // If is other table
+                                        exception +=
+                                            $"\n" +
+                                            $"Table: {table_name}\n|" +
+                                            $"- {table_details[0]} is not a backup data table.\n";
+                                        break;
+                                }
+                                success++;
+                            }
+                            catch (Exception ex)
+                            {
+                                // Set the local exception text
+                                exc = $"\n" +
+                                    $"Table: {table_name}\n|" +
+                                    $"\u25AA {ex.GetType().Name}\n>";
+
+                                exception += exc; // Append local exception text to global exception text
+
+                                string exc_msg;
+
+                                // Set exception message based on either has inner exception message or not
+                                try
+                                { exc_msg = $"{ex.InnerException.Message}: {ex.Message}"; }
+                                catch (NullReferenceException)
+                                { exc_msg = ex.Message; }
+
+                                // Log the thrown exception
+                                rtxt_importStusLog.AppendText($"\n \u274C (Rec {current_record}) {exc_msg}");
+                                failure++;
+                            }
+                        }
+
+                        rtxt_importStusLog.ScrollToCaret(); // Scroll to the bottom of the status log text box
+                    }
                 }
             }
 
@@ -797,29 +872,27 @@ namespace PlugIn_1.Forms
             rtxt_importStusLog.ScrollToCaret(); // Scroll to the bottom of the status log text box
         }
 
-        private void ProcessImport_ChartOfAccount(DbfData dbfData, int rec_no)
+        private void ProcessImport_ChartOfAccount(AccountModel acc_model, int rec_no)
         {
             Accounts accounts = new Accounts(Program.session);
 
-            string src_acc_no = dbfData.GetString(2);
-            string fmt_acc_no = ReformatAccNo(src_acc_no);
+            string sts_word;
+            string acc_no = acc_model.acc_no;
+            string acc_name = acc_model.desc;
 
-            // Make sure no duplicate account even with different account number format 
-            string acc_no;
-            string acc_name = dbfData.GetString(3);
+            if (!(accounts.isDebtorAcc(acc_no) || accounts.isCreditorAcc(acc_no)))
+            {
+                sts_word = DefStatus(accounts.hasAccount(acc_no)); // Show if add new or update record
 
-            if (chk_reformatAccNo.Checked)
-                // Use formatted account number when no source account number found in existing data
-                acc_no = !accounts.hasAccount(src_acc_no) ? fmt_acc_no : src_acc_no;
+                accounts.CreateNormalAccount(chk_overwriteExistData.Checked, acc_no, acc_model);
+            }
             else
-                // Use source account number when no formatted account number found in existing data
-                acc_no = !accounts.hasAccount(fmt_acc_no) ? src_acc_no : fmt_acc_no;
+            {
+                sts_word = accounts.isDebtorAcc(acc_no) ?
+                    "Skipped debtor" : "Skipped creditor";
+            }
 
-            string sts_word = DefStatus(accounts.hasAccount(acc_no)); // Show if add new or update record
-
-            accounts.CreateNormalAccount(chk_overwriteExistData.Checked, acc_no, dbfData);
-
-            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} account : '{acc_name}'");
+            rtxt_importStusLog.AppendText($"\n \u2705 (Rec {rec_no}) {sts_word} account : '{acc_no} --- {acc_name}'");
         }
 
         private void ProcessImport_SalesAgent(DbfData dbfData, int rec_no)
@@ -1259,25 +1332,31 @@ namespace PlugIn_1.Forms
             return text.Trim().Remove(0, 10); // Remove the "COMPANY" identifier in front of the company name
         }
 
-        private string ReformatAccNo(string acc_no)
+        internal string ReformatAccNo(string acc_no)
         {
-            string[] parts = acc_no.Split('/'); // Split account number to ["3000", "A01"]
+            string[] parts = acc_no.Split('/');     // Split account number to ["3000"/"9801", "A01"/"001"]
 
-            if (parts.Length != 2) return acc_no; // fallback if is ambigous account number format
+            if (parts.Length != 2) return acc_no;   // fallback if is formatted account number
 
-            string mainPart = parts[0]; // "3000"
-            string subPart = parts[1];  // "A01"
+            string mainPart = parts[0]; // "3000" / "9801"
+            string subPart = parts[1]; // "A01" / "001"
+            string midPart = "";
 
             // Format mainPart to 3 digits
-            if (mainPart.Length > 3) mainPart = mainPart.Substring(0, 3);
+            if (mainPart.Length > 3)
+            {
+                midPart = mainPart.Substring(3, 1);     // "0" or "1"
+                mainPart = mainPart.Substring(0, 3);    // "300" / "980"
+            }
 
             // Format subPart in the form of letters + numbers with leading zeros
             string alpha = new string(subPart.Where(c => char.IsLetter(c)).ToArray()); // "A"
-            string digit = new string(subPart.Where(c => char.IsDigit(c)).ToArray());  // "01"
+            string digit = new string(subPart.Where(c => char.IsDigit(c)).ToArray());  // "01" / "001"
 
-            string subFormatted = alpha + digit.PadLeft(digit.Length + 1, '0'); // "A001"
+            string subFormatted = alpha != "" ?
+                alpha + midPart + digit : midPart + digit;  // "A + 0 + 01" / "1 + 001"
 
-            return $"{mainPart}-{subFormatted}"; // "300-A001"
+            return $"{mainPart}-{subFormatted}";            // "300-A001" / "980-1001"
         }
 
         private string DefStatus()

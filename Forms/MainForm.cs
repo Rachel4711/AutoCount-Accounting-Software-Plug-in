@@ -1,12 +1,8 @@
-﻿using AutoCount.Data.EntityFramework;
-using DbfDataReader;
+﻿using DbfDataReader;
 using PlugIn_1.Entity.Accounts;
 using PlugIn_1.Entity.General_Maintainance;
 using System;
 using System.Windows.Forms;
-
-using Creditor = PlugIn_1.Entity.Creditor;
-using Debtor = PlugIn_1.Entity.Debtor;
 
 namespace PlugIn_1.Forms
 {
@@ -18,8 +14,6 @@ namespace PlugIn_1.Forms
     public partial class MainForm : Form
     {
         LoginForm loginForm = new LoginForm();
-
-        private string file_path;
 
         public MainForm()
         {
@@ -34,8 +28,6 @@ namespace PlugIn_1.Forms
             
             Text = Program.session != null ? 
                 $"AutoCount AC - UBS Data Migration ({Program.session.DBSetting.DBName.ToString()})" : "User Login";
-
-            file_path = "C:\\Users\\user1\\Downloads\\030524BACKUPACC\\";
         }
 
         private void btn_LogIn_Click(object sender, EventArgs e)
@@ -66,64 +58,29 @@ namespace PlugIn_1.Forms
                 "Closing application",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
 
-                e.Cancel = result.ToString().Equals("No") ? true : false;
+                e.Cancel = result.ToString().Equals("No");
             }
         }
 
         private void btn_UBS_migrate_Click(object sender, EventArgs e)
         {
-            UBSDataMigrateForm form = new UBSDataMigrateForm();
-            form.Show();
-        }
-
-        private void button2_Click(object sender, EventArgs e)
-        {
-            Accounts accounts = new Accounts(Program.session);
-
-            var options = new DbfDataReaderOptions { SkipDeletedRecords = true };
-
-            try
+            if (Program.pro_form == null)
             {
-                using (var dbfDataReader = new DbfDataReader.DbfDataReader(file_path + "gldata.dbf", options))
-                {
-                    while (dbfDataReader.Read())
-                    {
-                        accounts.DeleteAccount(dbfDataReader.GetString(2));
-                    }
-                }
-
-                MessageBox.Show("Delete Success");
+                // Create a new form if no same form opened
+                Program.pro_form = new UBSDataMigrateForm();
+                
+                // Display the form
+                Program.pro_form.Show();
             }
-            catch (Exception ex)
+            else
             {
-                MessageBox.Show($"{ex.GetType().Name}: {ex.Message}");
-            }
-        }
+                IntPtr hWnd = Program.pro_form.Handle; // Get the handle of the current form
 
-        private void button3_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                DeleteData("project");
+                // Restore the window if it's minimized
+                WindowActivator.ShowWindow(hWnd, WindowActivator.SW_RESTORE);
 
-                MessageBox.Show("Delete Success");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"{ex.GetType().Name}: {ex.Message}");
-            }
-        }
-
-        private void DeleteData(string file_name) // Testing purpose only
-        {
-            var options = new DbfDataReaderOptions { SkipDeletedRecords = true };
-
-            using (var dbfDataReader = new DbfDataReader.DbfDataReader(file_path + file_name + ".dbf", options))
-            {
-                while (dbfDataReader.Read())
-                {
-                    new Projects(Program.session).DeleteProject(dbfDataReader.GetString(0));
-                }
+                // Bring the window to the foreground
+                WindowActivator.SetForegroundWindow(hWnd);
             }
         }
     }
